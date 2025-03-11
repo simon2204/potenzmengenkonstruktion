@@ -77,29 +77,34 @@ export class InputTableComponent {
     this.activeCellType = type;
   }
 
-  // Zustand zu einer Zelle hinzufügen
+  // Zustand zu einer Zelle hinzufügen oder entfernen, wenn er bereits existiert
   addStateToCell(stateId: string): void {
     if (!this.activeCell || !this.activeCellType) return;
 
     this.tableData = this.tableData.map(row => {
       if (row.id === this.activeCell) {
         if (this.activeCellType === 'state') {
-          // Zustand zur Zustandsspalte hinzufügen
-          if (!row.states.includes(stateId)) {
-            return { ...row, states: [...row.states, stateId] };
-          }
+          // Zustand zur Zustandsspalte hinzufügen/entfernen (toggle)
+          const hasState = row.states.includes(stateId);
+          return {
+            ...row,
+            states: hasState
+                ? row.states.filter(s => s !== stateId)
+                : [...row.states, stateId]
+          };
         } else {
-          // Zustand zur Übergangsspalte hinzufügen
-          const symbol = this.activeCellType as string; // Typecast, da wir wissen, dass es nicht null ist
-          if (row.transitions[symbol] && !row.transitions[symbol].includes(stateId)) {
-            return {
-              ...row,
-              transitions: {
-                ...row.transitions,
-                [symbol]: [...row.transitions[symbol], stateId]
-              }
-            };
-          }
+          // Zustand zur Übergangsspalte hinzufügen/entfernen (toggle)
+          const symbol = this.activeCellType as string;
+          const hasState = row.transitions[symbol]?.includes(stateId);
+          return {
+            ...row,
+            transitions: {
+              ...row.transitions,
+              [symbol]: hasState
+                  ? row.transitions[symbol].filter(s => s !== stateId)
+                  : [...row.transitions[symbol], stateId]
+            }
+          };
         }
       }
       return row;
