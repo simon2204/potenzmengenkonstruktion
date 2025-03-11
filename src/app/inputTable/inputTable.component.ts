@@ -27,7 +27,7 @@ interface TableRow {
   standalone: true,
   imports: [CommonModule, StateBlockComponent]
 })
-export class InputTableComponent implements AfterViewInit {
+export class InputTableComponent implements OnInit, AfterViewInit {
   // Verfügbare Zustände und ihre Farben
   availableStates: StateItem[] = [
     { id: 'S0', color: '#2563eb' },
@@ -70,6 +70,60 @@ export class InputTableComponent implements AfterViewInit {
   activeCell: number | null = null;
   // Typ der aktiven Zelle: 'state' (für Zustandszeile) oder ein Symbol ('0', '1')
   activeCellType: string | null = null;
+
+  ngOnInit(): void {
+    const totalStates = 10; // Beispiel: 10 Zustände
+    const dynamicColors = this.generateColors(totalStates);
+
+    // Hier könntest du dann die Zustände mit den generierten Farben initialisieren
+    this.availableStates = dynamicColors.map((color, index) => ({
+      id: `S${index}`,
+      color: color
+    }));
+  }
+
+  // Erzeugt ein Array von Hex-Farben für eine gegebene Anzahl von Zuständen
+  generateColors(total: number): string[] {
+    const colors: string[] = [];
+    for (let i = 0; i < total; i++) {
+      const hue = Math.floor((360 / total) * i);
+      colors.push(this.hslToHex(hue, 80, 40));
+    }
+    return colors;
+  }
+
+  // Konvertiert HSL-Werte in einen Hex-Farbstring
+  hslToHex(h: number, s: number, l: number): string {
+    s /= 100;
+    l /= 100;
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+    const m = l - c / 2;
+    let r = 0, g = 0, b = 0;
+
+    if (h < 60) {
+      r = c; g = x; b = 0;
+    } else if (h < 120) {
+      r = x; g = c; b = 0;
+    } else if (h < 180) {
+      r = 0; g = c; b = x;
+    } else if (h < 240) {
+      r = 0; g = x; b = c;
+    } else if (h < 300) {
+      r = x; g = 0; b = c;
+    } else {
+      r = c; g = 0; b = x;
+    }
+
+    const R = Math.round((r + m) * 255);
+    const G = Math.round((g + m) * 255);
+    const B = Math.round((b + m) * 255);
+
+    // Konvertiere jeden Farbwert in einen Hex-String
+    return '#' + [R, G, B]
+        .map(val => val.toString(16).padStart(2, '0'))
+        .join('');
+  }
 
   ngAfterViewInit() {
     // Stelle sicher, dass nur die Zellen selbst fokussierbar sind
