@@ -1,0 +1,26 @@
+.state-block {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  user-select: none;
+}
+
+.state-remove-btn {
+  margin-left: 0.25rem;
+  background: none;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: currentColor;
+  opacity: 0.7;
+
+  &:hover {
+    opacity: 1;
+  }
+}

@@ -1,80 +1,100 @@
-<!--Nicht kommentierte Teile des Codes stammt aus dem vorgegebenen Projekt "Endlicher Automat"-->
+<div class="container">
+    <h2 class="header">Potenzmengenkonstruktion</h2>
 
-<div class="testview">
-  <div *ngIf="isDeterministic(); then deterministic; else notdeterministic"></div>
-</div>
-
-<ng-template #deterministic>
-  <div>Der Automat ist bereits deterministisch</div>
-</ng-template>
-
-<ng-template #notdeterministic>
-  <div>Der Automat ist nichtdeterministisch</div>
-
-  <mat-checkbox
-  name="endState"
-  style="font-size: small; padding-bottom: 10px"
-  [(ngModel)]="service.showDeterministicStates"
-  (change)="toggleCheckbox($event)">
-  <div>Zeige nichtdeterministische Zustände</div>
-</mat-checkbox>
-
-</ng-template>
-
-<div class="table-container">
- <div class="toggle-container">
-  <!-- Toggle-Button für den Lernmodus -->
-  <mat-slide-toggle 
-    color="primary"
-    [(ngModel)]="isLearningMode"  
-    (change)="toggleLearningMode($event)">
-    {{'Lernmodus'}}
-  </mat-slide-toggle>
-  <!-- Info Icon mit Klick-Ereignis -->
-  <mat-icon 
-    (click)="showAlert()" 
-    class="info-button">info
-  </mat-icon>
-</div>
-  <div>
-   <div>
-    <div class="buttons">
-      <!-- Buttons to set focused value to A, E or ∅ -->
-      <button  #AButton (click)="setFocusedValue('(A)')">A</button>
-      <button  #EButton (click)="setFocusedValue('(E)')">E</button>
-      <!-- Dynamic buttons for each state in automataStates -->
-      <button *ngFor="let state of sortedDfaStates" (click)="setFocusedValue(state)">
-        {{ state }}
-      </button>
+    <!-- Palette mit verfügbaren Zuständen -->
+    <div>
+        <p class="state-label">Verfügbare Zustände:</p>
+        <div class="states-container">
+            <div *ngFor="let state of availableStates"
+                 class="state-item"
+                 [style.background-color]="state.color + '20'"
+                 [style.color]="state.color"
+                 [style.border-color]="state.color"
+                 (click)="activeCell && addStateToCell(state.id)">
+                {{ state.id }}
+            </div>
+        </div>
     </div>
-    <table>
-      <thead>
+
+    <!-- Markierungen -->
+    <div>
+        <p class="state-label">Markierungen:</p>
+        <div class="states-container">
+            <div *ngFor="let marker of markers"
+                 class="state-item"
+                 [style.background-color]="marker.color + '20'"
+                 [style.color]="marker.color"
+                 (click)="activeCell && activeCellType === 'state' && toggleMarker(activeCell, marker.id)">
+                {{ marker.label }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Die interaktive Tabelle -->
+    <table class="table">
+        <colgroup>
+            <col style="width: auto;">
+            <col *ngFor="let symbol of symbols" style="width: 1fr;">
+        </colgroup>
+        <thead>
         <tr>
-          <th>SDFA</th>       
-           <!-- Dynamic headers for each unique transition symbol -->
-          <th *ngFor="let symbol of uniqueDfaTransitionSymbols">{{ symbol }}</th>
+            <th class="table-header-first">SDFA</th>
+            <th *ngFor="let symbol of symbols" class="table-header-symbol">{{ symbol }}</th>
         </tr>
-      </thead>
-      <tbody>
-        <!-- Rows for each state in automataStates -->
-        <tr *ngFor="let state of dfaStates">
-          <td>
-            <!-- Input for the first cell of the row -->
-            <input type="text" class="full-width-input" #firstCellInput (focus)="setFocusedCell(firstCellInput)" />
-          </td>
-          <!-- Inputs for each unique transition symbol -->
-          <td *ngFor="let symbol of uniqueDfaTransitionSymbols">
-            <input type="text" class="full-width-input" #symbolInput (focus)="setFocusedCell(symbolInput)"  />
-          </td>
+        </thead>
+        <tbody>
+        <tr *ngFor="let row of tableData">
+            <!-- Erste Spalte (SDFA) mit den möglichen Zuständen -->
+            <td [class]="activeCell === row.id && activeCellType === 'state' ? 'table-cell-active' : 'table-cell-first'"
+                (click)="selectCell(row.id, 'state')">
+                <div class="cell-blocks-container">
+                    <app-state-block *ngFor="let stateId of row.states"
+                                     [state]="stateId"
+                                     [color]="getStateColor(stateId)"
+                                     (remove)="removeStateFromCell(row.id, stateId)">
+                    </app-state-block>
+                    <app-state-block *ngFor="let markerId of row.markers"
+                                     [state]="markerId"
+                                     [color]="getMarkerColor(markerId)"
+                                     (remove)="toggleMarker(row.id, markerId)">
+                    </app-state-block>
+                </div>
+            </td>
+
+            <!-- Weitere Spalten für die Symbole -->
+            <td *ngFor="let symbol of symbols"
+                [class]="activeCell === row.id && activeCellType === symbol ? 'table-cell-active' : 'table-cell'"
+                (click)="selectCell(row.id, symbol)">
+                <div class="cell-blocks-container">
+                    <div *ngIf="row.transitions[symbol]?.length === 0" class="empty-text">∅</div>
+                    <app-state-block *ngFor="let stateId of row.transitions[symbol] || []"
+                                     [state]="stateId"
+                                     [color]="getStateColor(stateId)"
+                                     (remove)="removeTransitionState(row.id, symbol, stateId)">
+                    </app-state-block>
+                </div>
+            </td>
         </tr>
-      </tbody>
+        </tbody>
     </table>
-    <div class="buttons">
-      <div class="button-container">
-        <!-- Buttons to check the table and reset it -->
-        <button class="left-button" (click)="checkTable()">Prüfen</button>
-        <button class="right-button" (click)="resetTable()">Zurücksetzen</button>
-      </div>  
+
+    <!-- Status der aktiven Zelle -->
+    <div class="active-cell-info">
+        <p *ngIf="activeCell; else noActiveCell">
+            Aktive Zelle: Zeile {{activeCell}}, Spalte: {{activeCellType === 'state' ? 'SDFA' : activeCellType}}
+        </p>
+        <ng-template #noActiveCell>
+            <p>Klicken Sie auf eine Zelle, um sie zur aktiven Zelle zu machen.</p>
+        </ng-template>
     </div>
-  </div>
+
+    <!-- Steuerungselemente -->
+    <div class="controls">
+        <button class="button primary-button" (click)="checkTable()">
+            Prüfen
+        </button>
+        <button class="button danger-button" (click)="resetTable()">
+            Zurücksetzen
+        </button>
+    </div>
 </div>
