@@ -1,0 +1,54 @@
+<button mat-icon-button [matMenuTriggerFor]="settingsMenu" aria-label="Menü öffnen">
+    <mat-icon>menu</mat-icon>
+</button>
+
+<mat-menu #settingsMenu class="myMenuItem">
+    <button mat-menu-item class="myMenuItem" (click)="createNewInstance()">
+        <mat-icon>fiber_new</mat-icon>Neue Instanz
+    </button>
+
+    <button mat-menu-item class="myMenuItem" (click)="loadFromBrowserCache()">
+        <mat-icon>open_in_browser</mat-icon>Laden aus Browser-Cache
+    </button>
+
+    <button mat-menu-item class="myMenuItem" (click)="saveToBrowserCache()">
+        <mat-icon>save</mat-icon>Speichern in Browser-Cache
+    </button>
+
+    <label for="inputTag">
+        <menu mat-menu-item class="myMenuItem">
+            <mat-icon>file_upload</mat-icon>
+            Laden aus Datei
+            <input (change)="onFileUpload($event)" id="inputTag" type="file"/>
+        </menu>
+    </label>
+
+
+    <button mat-menu-item class="myMenuItem" (click)="saveToLocalStorage()">
+        <mat-icon>file_download</mat-icon>Speichern in Datei
+    </button>
+
+    <button mat-menu-item class="myMenuItem" [matMenuTriggerFor]="Uebungsaufgaben">
+        <mat-icon>open_in_browser</mat-icon>Übungsaufgaben laden
+    </button>
+
+    <button mat-menu-item class="myMenuItem" [matMenuTriggerFor]="Vorlesungsbeispiele">
+        <mat-icon>open_in_browser</mat-icon>Vorlesungsbeispiele laden
+    </button>
+
+    <button mat-menu-item class="myMenuItem" (click)="openHelpDialog()">
+        <mat-icon>help</mat-icon>Hilfe
+    </button>
+</mat-menu>
+
+<mat-menu #Vorlesungsbeispiele>
+    <button mat-menu-item class="myMenuItem" *ngFor="let aufgabe of vorlesungsbeispiele" (click)="createInstanceFromJSON(aufgabe)">
+        {{ aufgabe.title }}
+    </button>
+</mat-menu>
+
+<mat-menu #Uebungsaufgaben>
+    <button mat-menu-item class="myMenuItem" *ngFor="let aufgabe of uebungsaufgaben" (click)="createInstanceFromJSON(aufgabe)">
+        {{ aufgabe.title }}
+    </button>
+</mat-menu>

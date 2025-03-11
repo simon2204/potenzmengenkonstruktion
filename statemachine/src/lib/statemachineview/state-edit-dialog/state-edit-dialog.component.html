@@ -1,0 +1,32 @@
+<div class="container">
+    <h3 mat-dialog-title>Zustand {{ data.name }} bearbeiten</h3>
+    <div mat-dialog-content>
+        <form>
+            <mat-form-field>
+                <mat-label>Zustandsname</mat-label>
+                <input title="Zustandsname" matInput type="text" autocomplete="off" value="{{ data.name }}"
+                    [(ngModel)]="data.name" maxlength="12" name="stateName-input" (keydown.enter)="onEnter()">
+            </mat-form-field>
+            <section>
+                <mat-checkbox (change)="toggleStart($event.checked)" [checked]="isStartState()" name="startState">
+                    Startzustand
+                </mat-checkbox>
+                <br />
+                <mat-checkbox (change)="toggleFinal($event.checked)" [checked]="isFinalState()" name="endState">
+                    Endzustand
+                </mat-checkbox>
+            </section>
+        </form>
+
+        <div class="action-buttons" mat-dialog-actions>
+            <button mat-stroked-button [mat-dialog-close]="" (click)="deleteState()" class="button-delete" color="warn">
+                Löschen
+            </button>
+    
+            <button mat-stroked-button [mat-dialog-close]="" class="button-ok">
+                Ok
+            </button>
+        </div>
+    </div>
+    
+</div>

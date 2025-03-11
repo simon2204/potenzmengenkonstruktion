@@ -1,0 +1,33 @@
+@import '../styles';
+
+footer {
+    display: block;
+    background-color: $black;
+    min-width: 100%;
+    width: auto;
+    margin: 0;
+    padding: 2px 0px 2px 0px;
+    color: $white;
+    font-size: smaller;
+    text-align: left;
+  
+    .wh-text {
+      color: $green;
+      margin: 0px 10px 0px 10px;
+    }
+  
+    .infoLinks {
+      text-align: right;
+      position: fixed;
+      right: 0px;
+      margin-right: 30px;
+      a {
+        color: white;
+        margin-left: 10px;
+        text-decoration: none;
+      }
+    }
+    .infoLinks a:hover {
+      color: $green;
+    }
+  }

@@ -1,0 +1,11 @@
+<span>{{ title }}:</span>
+<input
+  type="text"
+  autocomplete="off"
+  [ngClass]="{
+    tapeInput: true,
+    accepting: isReady() && isAccepting(),
+    notAccepting: isReady() && !isAccepting() 
+  }"
+  (input)="updateContent($event)"
+/>

@@ -1,0 +1,80 @@
+<!--Nicht kommentierte Teile des Codes stammt aus dem vorgegebenen Projekt "Endlicher Automat"-->
+
+<div class="testview">
+  <div *ngIf="isDeterministic(); then deterministic; else notdeterministic"></div>
+</div>
+
+<ng-template #deterministic>
+  <div>Der Automat ist bereits deterministisch</div>
+</ng-template>
+
+<ng-template #notdeterministic>
+  <div>Der Automat ist nichtdeterministisch</div>
+
+  <mat-checkbox
+  name="endState"
+  style="font-size: small; padding-bottom: 10px"
+  [(ngModel)]="service.showDeterministicStates"
+  (change)="toggleCheckbox($event)">
+  <div>Zeige nichtdeterministische Zustände</div>
+</mat-checkbox>
+
+</ng-template>
+
+<div class="table-container">
+ <div class="toggle-container">
+  <!-- Toggle-Button für den Lernmodus -->
+  <mat-slide-toggle 
+    color="primary"
+    [(ngModel)]="isLearningMode"  
+    (change)="toggleLearningMode($event)">
+    {{'Lernmodus'}}
+  </mat-slide-toggle>
+  <!-- Info Icon mit Klick-Ereignis -->
+  <mat-icon 
+    (click)="showAlert()" 
+    class="info-button">info
+  </mat-icon>
+</div>
+  <div>
+   <div>
+    <div class="buttons">
+      <!-- Buttons to set focused value to A, E or ∅ -->
+      <button  #AButton (click)="setFocusedValue('(A)')">A</button>
+      <button  #EButton (click)="setFocusedValue('(E)')">E</button>
+      <!-- Dynamic buttons for each state in automataStates -->
+      <button *ngFor="let state of sortedDfaStates" (click)="setFocusedValue(state)">
+        {{ state }}
+      </button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>SDFA</th>       
+           <!-- Dynamic headers for each unique transition symbol -->
+          <th *ngFor="let symbol of uniqueDfaTransitionSymbols">{{ symbol }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Rows for each state in automataStates -->
+        <tr *ngFor="let state of dfaStates">
+          <td>
+            <!-- Input for the first cell of the row -->
+            <input type="text" class="full-width-input" #firstCellInput (focus)="setFocusedCell(firstCellInput)" />
+          </td>
+          <!-- Inputs for each unique transition symbol -->
+          <td *ngFor="let symbol of uniqueDfaTransitionSymbols">
+            <input type="text" class="full-width-input" #symbolInput (focus)="setFocusedCell(symbolInput)"  />
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="buttons">
+      <div class="button-container">
+        <!-- Buttons to check the table and reset it -->
+        <button class="left-button" (click)="checkTable()">Prüfen</button>
+        <button class="right-button" (click)="resetTable()">Zurücksetzen</button>
+      </div>  
+    </div>
+  </div>
+</div>
