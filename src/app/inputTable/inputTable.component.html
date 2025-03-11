@@ -46,7 +46,9 @@
         <tr *ngFor="let row of tableData">
             <!-- Erste Spalte (SDFA) mit den möglichen Zuständen -->
             <td [class]="activeCell === row.id && activeCellType === 'state' ? 'table-cell-active' : 'table-cell-first'"
-                (click)="selectCell(row.id, 'state')">
+                [tabindex]="0"
+                (click)="selectCell(row.id, 'state')"
+                (keydown)="handleKeyDown($event, row.id, 'state')">
                 <div class="cell-blocks-container">
                     <app-state-block *ngFor="let stateId of row.states"
                                      [state]="stateId"
@@ -64,7 +66,9 @@
             <!-- Weitere Spalten für die Symbole -->
             <td *ngFor="let symbol of symbols"
                 [class]="activeCell === row.id && activeCellType === symbol ? 'table-cell-active' : 'table-cell'"
-                (click)="selectCell(row.id, symbol)">
+                [tabindex]="0"
+                (click)="selectCell(row.id, symbol)"
+                (keydown)="handleKeyDown($event, row.id, symbol)">
                 <div class="cell-blocks-container">
                     <div *ngIf="row.transitions[symbol]?.length === 0" class="empty-text">∅</div>
                     <app-state-block *ngFor="let stateId of row.transitions[symbol] || []"

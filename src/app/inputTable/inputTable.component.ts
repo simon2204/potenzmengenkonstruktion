@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import {AfterViewInit, Component, OnInit} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StateBlockComponent } from "./state-block/state-block.component";
 
@@ -27,7 +27,7 @@ interface TableRow {
   standalone: true,
   imports: [CommonModule, StateBlockComponent]
 })
-export class InputTableComponent {
+export class InputTableComponent implements AfterViewInit {
   // Verfügbare Zustände und ihre Farben
   availableStates: StateItem[] = [
     { id: 'S0', color: '#2563eb' },
@@ -71,10 +71,39 @@ export class InputTableComponent {
   // Typ der aktiven Zelle: 'state' (für Zustandszeile) oder ein Symbol ('0', '1')
   activeCellType: string | null = null;
 
+  ngAfterViewInit() {
+    // Stelle sicher, dass nur die Zellen selbst fokussierbar sind
+    const cells = document.querySelectorAll('td');
+    cells.forEach(cell => {
+      cell.tabIndex = 0;
+      // Entferne tabindex von allen Kindelementen
+      cell.querySelectorAll('*').forEach(child => {
+        if(child.hasAttribute('tabindex')) {
+          child.removeAttribute('tabindex');
+        }
+      });
+    });
+  }
+
   // Eine Zelle auswählen
   selectCell(rowId: number, type: string): void {
     this.activeCell = rowId;
     this.activeCellType = type;
+
+    // Fokussiere die Zelle, aber warte einen Tick, um sicherzustellen, dass Angular die UI aktualisiert hat
+    setTimeout(() => {
+      const rowIndex = this.tableData.findIndex(row => row.id === rowId);
+      const colIndex = type === 'state' ? 0 : this.symbols.indexOf(type) + 1;
+
+      const rows = Array.from(document.querySelectorAll('tr'));
+      // +1 weil der Header auch eine Zeile ist
+      if (rows[rowIndex + 1]) {
+        const cells = Array.from(rows[rowIndex + 1].querySelectorAll('td'));
+        if (cells[colIndex]) {
+          cells[colIndex].focus();
+        }
+      }
+    });
   }
 
   // Zustand zu einer Zelle hinzufügen oder entfernen, wenn er bereits existiert
@@ -181,5 +210,66 @@ export class InputTableComponent {
   checkTable(): void {
     console.log("Tabellendaten:", this.tableData);
     alert("Prüfung durchgeführt! (Details in der Konsole)");
+  }
+
+  // Tastaturfunktionalität
+  handleKeyDown(event: KeyboardEvent, rowId: number, type: string): void {
+    // Aktuelle Zelle auswählen, wenn sie noch nicht ausgewählt ist
+    if (this.activeCell !== rowId || this.activeCellType !== type) {
+      this.selectCell(rowId, type);
+      return;
+    }
+
+    // Index der aktuellen Zeile und Spalte bestimmen
+    const rowIndex = this.tableData.findIndex(row => row.id === rowId);
+    let colIndex = type === 'state' ? 0 : this.symbols.indexOf(type) + 1;
+
+    let newRowIndex = rowIndex;
+    let newColIndex = colIndex;
+
+    // Navigation mit Pfeiltasten
+    switch (event.key) {
+      case 'ArrowUp':
+        newRowIndex = Math.max(0, rowIndex - 1);
+        event.preventDefault();
+        break;
+      case 'ArrowDown':
+        newRowIndex = Math.min(this.tableData.length - 1, rowIndex + 1);
+        event.preventDefault();
+        break;
+      case 'ArrowLeft':
+        newColIndex = Math.max(0, colIndex - 1);
+        event.preventDefault();
+        break;
+      case 'ArrowRight':
+        newColIndex = Math.min(this.symbols.length, colIndex + 1);
+        event.preventDefault();
+        break;
+      case 'Enter':
+      case ' ':
+        // Wenn Enter oder Leertaste gedrückt wurde, simuliere einen Klick
+        // Je nach Zelltyp könntest du unterschiedliche Aktionen auslösen
+        event.preventDefault();
+        return;
+    }
+
+    // Neue aktive Zelle setzen, wenn sich die Position geändert hat
+    if (newRowIndex !== rowIndex || newColIndex !== colIndex) {
+      const newRow = this.tableData[newRowIndex];
+      const newType = newColIndex === 0 ? 'state' : this.symbols[newColIndex - 1];
+
+      this.selectCell(newRow.id, newType);
+
+      // Fokus auf die neue Zelle setzen
+      setTimeout(() => {
+        const rows = Array.from(document.querySelectorAll('tr'));
+        const cells = Array.from(rows[newRowIndex + 1].querySelectorAll('td')); // +1 weil der Header auch eine Zeile ist
+        const cell = cells[newColIndex];
+
+        if (cell) {
+          cell.focus();
+        }
+      });
+    }
   }
 }
