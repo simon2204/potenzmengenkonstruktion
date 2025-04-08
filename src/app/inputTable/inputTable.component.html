@@ -70,7 +70,6 @@
                 (click)="selectCell(row.id, symbol)"
                 (keydown)="handleKeyDown($event, row.id, symbol)">
                 <div class="cell-blocks-container">
-                    <div *ngIf="row.transitions[symbol]?.length === 0" class="empty-text">∅</div>
                     <app-state-block *ngFor="let state of row.transitions[symbol] || []"
                                      [state]="state.name"
                                      [color]="getStateColor(state.id)"
