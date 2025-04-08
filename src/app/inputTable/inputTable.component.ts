@@ -50,7 +50,9 @@ export class InputTableComponent {
     const uniqueSymbols: Set<string> = new Set();
     for (const transition of this.service.transitions) {
       for (const symbol of (transition as EndlicheTransition).transitionSymbols) {
-        uniqueSymbols.add(symbol);
+        if (symbol !== EndlicherAutomat.epsilon) {
+          uniqueSymbols.add(symbol);
+        }
       }
     }
     return Array.from(uniqueSymbols).sort();

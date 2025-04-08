@@ -243,10 +243,6 @@ export class DfaSolutionTableComponent implements OnChanges {
     return Array.from(uniqueSymbols).sort(); // Alphabet sortieren ist ok für Spaltenreihenfolge
   }
 
-  get emptyStateId(): number | string {
-    return this.emptyState.id;
-  }
-
   // --- UI Farb-Hilfsfunktionen (unverändert) ---
   getStateColor(stateId: number | string): string {
     if (stateId === this.emptyState.id) return '#aaaaaa';
