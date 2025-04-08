@@ -1,86 +1,110 @@
 /* Styles specific to the solution table container */
 .solution-container {
-  margin-top: 1.5rem;
+  // Use similar padding/background if desired, or let parent control it
+  // padding: 1.5rem;
+  // background-color: #f3f4f6; // Example background
+  font-family: system-ui, -apple-system, sans-serif; // Match font
+  margin-top: 1.5rem; // Space above the solution
   padding-top: 1rem;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid #e0e0e0; // Separator line
 }
 
-/* Basic table styling (you might inherit this from global styles) */
+/* Title for the solution section */
+.solution-header {
+  font-size: 1.25rem; // Match interactive table header size
+  font-weight: 700;
+  margin-bottom: 0.5rem; // Space below title
+}
+
+/* Note below the title */
+.solution-note {
+  font-size: 0.875rem;
+  font-style: italic;
+  color: #6b7280; // Slightly muted color
+  margin-bottom: 1rem;
+}
+
+/* Base table styles - copied from interactive table */
 .table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 0.5rem;
-  margin-bottom: 1rem;
-  font-size: 0.9em;
+  table-layout: fixed;
+  margin-bottom: 1rem; // Reduced bottom margin slightly
 }
 
-.table th,
-.table td {
-  border: 1px solid #ccc;
-  padding: 6px 10px;
+/* Header cell styles - copied */
+.table-header-first {
+  background-color: #e5e7eb;
+  text-align: left;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  width: auto;
+  min-width: 150px; // Keep width constraints consistent
+  max-width: 280px;
+  font-weight: 600; // Ensure consistent font weight
+}
+
+.table-header-symbol {
+  background-color: #e5e7eb;
   text-align: center;
-  vertical-align: middle;
-  min-height: 40px; /* Ensure cells have some height */
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  font-weight: 600; // Ensure consistent font weight
 }
 
-.table th {
-  background-color: #f2f2f2;
-  font-weight: bold;
-}
-
-/* Specific styles for the solution table */
-.solution-table {
-  background-color: #fdfdfd; /* Slightly off-white background */
-}
-
-/* Cell styles */
-.table-cell,
-.table-cell-first {
-  background-color: #ffffff;
+/* Base data cell styles - copied, but NO interactive styles */
+.table-cell, .table-cell-first {
+  box-sizing: border-box;
+  height: 3rem; /* Match height */
+  vertical-align: top;
+  background-color: white; /* Match background */
+  padding: 0.5rem; /* Match padding */
+  border: 1px solid #d1d5db; /* Match border */
+  /* NO CURSOR POINTER */
+  text-align: left; /* Align text within the cell itself to the left */
 }
 
 .table-cell-first {
-  font-weight: bold; /* Optionally make the state name column bold */
+  /* Keep specific styles if any, e.g., slightly different background or font */
 }
 
-/* Container within cells for state blocks */
+/* Cell content container - MODIFIED */
 .cell-blocks-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px; /* Spacing between blocks */
-  align-items: center;
-  justify-content: center; /* Center blocks horizontally */
-  min-height: 30px;
+  gap: 0.25rem; /* Match gap */
+  align-items: center; /* Align blocks vertically */
+  justify-content: flex-start; /* <<< CHANGED FROM center TO flex-start */
+  min-height: calc(3rem - 1rem); /* Ensure content area fills cell height minus padding */
 }
 
-/* Style for the empty set symbol */
+/* Empty set text style - copied */
 .empty-text {
-  color: #6c757d;
-  font-style: italic;
-  display: inline-block;
-  padding: 4px 8px;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  padding: 0.25rem 0; // Adjust padding slightly if needed
+  /* Ensure it behaves like other flex items */
+  display: inline-block; /* Or flex */
+  line-height: normal; /* Adjust if needed for vertical alignment with blocks */
 }
 
 /* Loading and Error Messages */
 .loading-message,
 .error-message {
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 4px;
+  padding: 10px 15px;
+  margin: 1rem 0;
+  border-radius: 0.375rem; /* Match button radius */
   text-align: center;
+  font-size: 0.9em;
 }
 
 .loading-message {
-  background-color: #e0e0e0;
-  color: #333;
+  background-color: #e5e7eb; /* Match header background */
+  color: #374151; /* Darker gray text */
 }
 
 .error-message {
-  background-color: #f8d7da; /* Light red */
-  color: #721c24; /* Dark red */
-  border: 1px solid #f5c6cb;
+  background-color: #fee2e2; /* Lighter red */
+  color: #b91c1c; /* Darker red text */
+  border: 1px solid #fecaca; /* Red border */
 }
-
-/* Ensure StateBlockComponent styles are applied if needed */
-/* Import StateBlockComponent's styles if they are not global */
-/* @import '../inputTable/state-block/state-block.component.scss'; */

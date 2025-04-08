@@ -324,5 +324,4 @@ export class DfaSolutionTableComponent implements OnChanges {
   trackSymbol(index: number, symbol: string): string { return symbol; }
   trackStateById(index: number, state: EndlicherState): number | string { return state.id ?? index; }
   trackMarkerId(index: number, markerId: string): string { return markerId; }
-
 }
