@@ -5,6 +5,8 @@ import {EndlicherState} from "../endlicherautomat/EndlicherState";
 import {StatemachineService} from "../../../statemachine/src/lib/statemachine/statemachine.service";
 import {EndlicheTransition} from "../endlicherautomat/EndlicheTransition";
 import {Point} from "../../../statemachine/src/lib/statemachine/drawingprimitives/Point";
+import {DfaSolutionTableComponent} from "../dfa-solution-table/dfa-solution-table.component";
+import {EndlicherAutomat} from "../endlicherautomat/EndlicherAutomat";
 
 interface MarkerItem {
   id: string;
@@ -24,11 +26,15 @@ interface TableRow {
   templateUrl: './inputTable.component.html',
   styleUrls: ['./inputTable.component.scss'],
   standalone: true,
-  imports: [CommonModule, StateBlockComponent]
+  imports: [CommonModule, StateBlockComponent, DfaSolutionTableComponent]
 })
 export class InputTableComponent {
 
   private emptyState: EndlicherState;
+
+  get stateMachine(): EndlicherAutomat {
+    return this.service.stateMachine as EndlicherAutomat;
+  }
 
   get availableStates(): EndlicherState[] {
     return [this.emptyState,  ...this.service.states as EndlicherState[]];
