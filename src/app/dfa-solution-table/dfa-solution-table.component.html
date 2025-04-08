@@ -1,5 +1,15 @@
 <div class="solution-container">
-    <h2 class="solution-header">Lösung (DFA-Tabelle)</h2>
+    <!-- Container for Header and Button -->
+    <div class="solution-header-controls">
+        <h2 class="solution-header">Lösung (DFA-Tabelle)</h2>
+        <!-- NEU: Button zum neu generieren -->
+        <button
+                class="button solution-regenerate-button"
+                (click)="regenerateTable()"
+                [disabled]="isLoading">
+            {{ isLoading ? 'Generiere...' : 'Neu generieren' }}
+        </button>
+    </div>
 
     <!-- Loading Indicator -->
     <div *ngIf="isLoading" class="loading-message">
@@ -12,17 +22,15 @@
     </div>
 
     <!-- Solution Table -->
-    <!-- Use *ngIf to only render the table structure when data is ready -->
     <div *ngIf="!isLoading && !errorMsg && solutionTableData && solutionTableData.length > 0; else noData">
         <p class="solution-note"><i>(Diese Tabelle ist nicht interaktiv)</i></p>
-        <table class="table"> <!-- Use the base .table class -->
+        <table class="table">
             <colgroup>
-                <col style="width: auto;"> <!-- Match interactive table colgroup -->
+                <col style="width: auto;">
                 <col *ngFor="let symbol of symbols; trackBy: trackSymbol" style="width: 1fr;">
             </colgroup>
             <thead>
             <tr>
-                <!-- Use the exact same header classes -->
                 <th class="table-header-first">SDFA</th>
                 <th *ngFor="let symbol of symbols; trackBy: trackSymbol" class="table-header-symbol">{{ symbol }}</th>
             </tr>
@@ -30,19 +38,12 @@
             <tbody>
             <tr *ngFor="let row of solutionTableData; trackBy: trackRowById">
                 <!-- State Column (Read Only) -->
-                <!-- Use ONLY the base cell class, NO interactive classes/bindings -->
                 <td class="table-cell-first">
                     <div class="cell-blocks-container">
-                        <!-- Logic for empty set display -->
-                        <div *ngIf="row.states.length === 1 && row.states[0].id === emptyStateId" class="empty-text">∅</div>
-                        <!-- State blocks (NO remove binding) -->
-                        <ng-container *ngIf="!(row.states.length === 1 && row.states[0].id === emptyStateId)">
-                            <app-state-block *ngFor="let state of row.states; trackBy: trackStateById"
-                                             [state]="state.name"
-                                             [color]="getStateColor(state.id)">
-                            </app-state-block>
-                        </ng-container>
-                        <!-- Marker blocks (NO remove binding) -->
+                        <app-state-block *ngFor="let state of row.states; trackBy: trackStateById"
+                                         [state]="state.name"
+                                         [color]="getStateColor(state.id)">
+                        </app-state-block>
                         <app-state-block *ngFor="let markerId of row.markers; trackBy: trackMarkerId"
                                          [state]="markerId"
                                          [color]="getMarkerColor(markerId)">
@@ -50,18 +51,12 @@
                     </div>
                 </td>
                 <!-- Transition Columns (Read Only) -->
-                <!-- Use ONLY the base cell class, NO interactive classes/bindings -->
                 <td *ngFor="let symbol of symbols; trackBy: trackSymbol" class="table-cell">
                     <div class="cell-blocks-container">
-                        <!-- Logic for empty set display -->
-                        <div *ngIf="!row.transitions[symbol] || row.transitions[symbol]?.length === 0 || (row.transitions[symbol]?.length === 1 && row.transitions[symbol][0].id === emptyStateId)" class="empty-text">∅</div>
-                        <!-- Transition state blocks (NO remove binding) -->
-                        <ng-container *ngIf="row.transitions[symbol] && row.transitions[symbol].length > 0 && !(row.transitions[symbol].length === 1 && row.transitions[symbol][0].id === emptyStateId)">
-                            <app-state-block *ngFor="let state of row.transitions[symbol]; trackBy: trackStateById"
-                                             [state]="state.name"
-                                             [color]="getStateColor(state.id)">
-                            </app-state-block>
-                        </ng-container>
+                        <app-state-block *ngFor="let state of row.transitions[symbol]; trackBy: trackStateById"
+                                         [state]="state.name"
+                                         [color]="getStateColor(state.id)">
+                        </app-state-block>
                     </div>
                 </td>
             </tr>
@@ -71,8 +66,8 @@
 
     <!-- Template shown if no data is available -->
     <ng-template #noData>
-        <div *ngIf="!isLoading && !errorMsg" class="loading-message"> <!-- Reuse loading style for placeholder -->
-            Keine Lösungsdaten verfügbar oder Automat ungültig.
+        <div *ngIf="!isLoading && !errorMsg" class="loading-message">
+            Keine Lösungsdaten verfügbar oder Automat ungültig. Klicken Sie auf 'Neu generieren', wenn ein Automat vorhanden ist.
         </div>
     </ng-template>
 

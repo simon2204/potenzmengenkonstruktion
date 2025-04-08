@@ -3,10 +3,9 @@ import { CommonModule } from '@angular/common';
 import { EndlicherAutomat } from '../endlicherautomat/EndlicherAutomat';
 import { EndlicherState } from '../endlicherautomat/EndlicherState';
 import { Point } from '../../../statemachine/src/lib/statemachine/drawingprimitives/Point';
-// Assuming StateBlockComponent is standalone and can be imported
 import { StateBlockComponent } from "../inputTable/state-block/state-block.component";
 
-// Define the TableRow interface locally or import if shared
+// Interface für die Struktur einer Tabellenzeile
 interface TableRow {
   id: number;
   states: EndlicherState[];
@@ -14,7 +13,7 @@ interface TableRow {
   transitions: { [symbol: string]: EndlicherState[] };
 }
 
-// Define MarkerItem interface locally or import if shared
+// Interface für Marker-Definitionen
 interface MarkerItem {
   id: string;
   label: string;
@@ -26,66 +25,51 @@ interface MarkerItem {
   templateUrl: './dfa-solution-table.component.html',
   styleUrls: ['./dfa-solution-table.component.scss'],
   standalone: true,
-  imports: [
-    CommonModule,         // For *ngIf, *ngFor
-    StateBlockComponent   // To display state blocks
-  ]
+  imports: [ CommonModule, StateBlockComponent ]
 })
 export class DfaSolutionTableComponent implements OnChanges {
 
-  // Input property to receive the NFA instance
   @Input() automat: EndlicherAutomat | null = null;
 
-  // Internal state to hold the generated table data
   solutionTableData: TableRow[] | null = null;
   isLoading: boolean = false;
   errorMsg: string | null = null;
 
-  // Local definition of the empty state representation
   private readonly emptyState: EndlicherState;
-
-  // Local map of NFA states from the input automaton
   private nfaStateMap = new Map<number | string, EndlicherState>();
-
-  // Local definition of markers (could also be an input if needed)
   private readonly markers: MarkerItem[] = [
     { id: '(A)', label: 'A', color: '#f59e0b' },
     { id: '(E)', label: 'E', color: '#ef4444' }
   ];
 
   constructor() {
-    // Initialize the local emptyState object
-    const empty = new EndlicherState(Point.zero, -1); // Use distinct ID
+    const empty = new EndlicherState(Point.zero, -1);
     empty.name = "∅";
     this.emptyState = empty;
   }
 
-  // Lifecycle hook to react to changes in the input 'automat'
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['automat']) {
       this.regenerateTable();
     }
   }
 
-  // Main function to trigger table generation
-  private regenerateTable(): void {
+  // Trigger regeneration (public for button click)
+  regenerateTable(): void { // Made public
     this.isLoading = true;
-    this.solutionTableData = null; // Clear previous data
-    this.errorMsg = null;          // Clear previous error
+    this.solutionTableData = null;
+    this.errorMsg = null;
 
-    // Use setTimeout to allow UI update (show loading) before potentially long calculation
     setTimeout(() => {
       if (this.automat) {
         try {
-          // Build the state map based on the current automaton
           this.buildNfaStateMap();
-          // Generate the solution data
           this.solutionTableData = this.generateSolutionTableDataInternal();
           if (!this.solutionTableData || this.solutionTableData.length === 0) {
-            this.errorMsg = "Keine Zustände im resultierenden DFA gefunden.";
+            this.errorMsg = "Keine Zustände im resultierenden DFA gefunden oder Startzustand problematisch.";
           }
         } catch (error: any) {
-          console.error("Error generating DFA solution table:", error);
+          console.error("Fehler bei Generierung der DFA-Lösungstabelle:", error);
           this.errorMsg = `Fehler beim Generieren der Tabelle: ${error.message || error}`;
           this.solutionTableData = null;
         }
@@ -93,18 +77,14 @@ export class DfaSolutionTableComponent implements OnChanges {
         this.errorMsg = "Kein Automat für die Generierung vorhanden.";
         this.solutionTableData = null;
       }
-      this.isLoading = false; // Hide loading indicator
+      this.isLoading = false;
     });
-
   }
 
-  // Populates the local nfaStateMap from the input automaton
   private buildNfaStateMap(): void {
     this.nfaStateMap.clear();
     if (this.automat && this.automat.getAllStates()) {
-      // Add the special empty state
       this.nfaStateMap.set(this.emptyState.id, this.emptyState);
-      // Add all states from the input NFA
       this.automat.getAllStates().forEach(state => {
         if (state && typeof state.id !== 'undefined') {
           this.nfaStateMap.set(state.id, state as EndlicherState);
@@ -113,67 +93,71 @@ export class DfaSolutionTableComponent implements OnChanges {
     }
   }
 
-  // --- Core Solution Generation Logic (Internal) ---
-  // (This is largely the same as the logic previously added to InputTableComponent)
+  // --- Kernlogik: Potenzmengenkonstruktion ---
   private generateSolutionTableDataInternal(): TableRow[] | null {
-    const nfa = this.automat; // Use the input property
+    const nfa = this.automat;
     if (!nfa || !nfa.startState || !(nfa.startState instanceof EndlicherState)) {
-      // Error handled in regenerateTable, but return null here
+      console.error("DFA Solution Table: NFA, Startzustand nicht gefunden oder ungültig.");
       return null;
     }
-    // Ensure map is built (should be called before this)
     if (this.nfaStateMap.size <= 1 && nfa.getAllStates().length > 0) {
-      console.warn("DFA Solution Table: NFA state map seems incomplete.");
+      console.warn("DFA Solution Table: NFA state map scheint unvollständig.");
     }
 
+    const solutionData: TableRow[] = []; // Das Ergebnis-Array wird in Verarbeitungsreihenfolge gefüllt
+    let rowIdCounter = 1; // Für eindeutige IDs in der Reihenfolge der Verarbeitung
 
-    const solutionData: TableRow[] = [];
-    let rowIdCounter = 1;
+    // Map zur Verfolgung der DFA-Zustandsmengen (bereits entdeckt)
     const dfaStateSets = new Map<string, Set<EndlicherState>>();
+    // Warteschlange (FIFO) für noch zu verarbeitende NFA-Zustandsmengen
     const unprocessedSets: Set<EndlicherState>[] = [];
+    // Set zur Verfolgung bereits zur Warteschlange hinzugefügter Schlüssel
     const unprocessedKeys = new Set<string>();
 
-    // 1. Start State
+    // 1. Startzustand des DFA bestimmen
     const startNfaStates = new Set([nfa.startState as EndlicherState]);
     const startStateClosureSet = new Set(EndlicherState.eClosure2(startNfaStates));
     const startStateKey = this.getStateSetKey(startStateClosureSet);
 
-    if (startStateKey !== '∅') { // Only proceed if start state closure is not empty
+    // Nur fortfahren, wenn der Startzustand nicht selbst die leere Menge ist
+    if (startStateKey !== '∅') {
       dfaStateSets.set(startStateKey, startStateClosureSet);
-      unprocessedSets.push(startStateClosureSet);
+      unprocessedSets.push(startStateClosureSet); // Startzustand in die Warteschlange
       unprocessedKeys.add(startStateKey);
     } else {
-      // Handle case where even the start state closure is empty
+      // Sonderfall: Selbst die ε-Hülle des Startzustands ist leer.
+      console.warn("DFA Solution Table: Startzustand ε-Hülle ist leer.");
       const emptyRow: TableRow = {
-        id: rowIdCounter++,
+        id: rowIdCounter++, // ID 1
         states: [this.emptyState],
-        markers: [], // Empty state cannot be start or final? Check definition. Add if needed.
+        markers: [],
         transitions: {}
       };
       const alphabet = this.symbols;
       for (const symbol of alphabet) {
-        emptyRow.transitions[symbol] = [this.emptyState]; // Empty transitions to empty
+        emptyRow.transitions[symbol] = [this.emptyState];
       }
       solutionData.push(emptyRow);
-      return solutionData; // Return table with only empty set if start is empty
+      return solutionData; // Nur die leere Menge zurückgeben
     }
-
 
     const alphabet = this.symbols;
 
-    // 2. Process States
+    // 2. Zustände iterativ verarbeiten, solange die Warteschlange nicht leer ist
     while (unprocessedSets.length > 0) {
-      const currentNfaStatesSet = unprocessedSets.shift()!;
+      // Nächste Zustandsmenge aus der Warteschlange holen (FIFO)
+      const currentNfaStatesSet = unprocessedSets.shift()!; // shift() für FIFO
       const currentStateKey = this.getStateSetKey(currentNfaStatesSet);
 
+      // TableRow-Objekt für diesen *gerade verarbeiteten* DFA-Zustand erstellen
       const currentRow: TableRow = {
-        id: rowIdCounter++,
+        id: rowIdCounter++, // ID in Verarbeitungsreihenfolge zuweisen
         states: this.getStatesFromSet(currentNfaStatesSet),
         markers: [],
         transitions: {}
       };
 
-      // 3. Markers
+      // 3. Marker bestimmen (wie zuvor)
       if (currentStateKey === startStateKey) {
         currentRow.markers.push('(A)');
       }
@@ -189,39 +173,31 @@ export class DfaSolutionTableComponent implements OnChanges {
       }
       currentRow.markers.sort();
 
-      // 4. Transitions
+      // 4. Übergänge für jedes Symbol im Alphabet berechnen
       for (const symbol of alphabet) {
         const movedStates = EndlicherState.move2(Array.from(currentNfaStatesSet), symbol);
         const nextNfaStateClosureSet = new Set(EndlicherState.eClosure2(new Set(movedStates)));
         const nextStateKey = this.getStateSetKey(nextNfaStateClosureSet);
 
+        // Übergangsziel in der aktuellen Zeile speichern
         currentRow.transitions[symbol] = this.getStatesFromSet(nextNfaStateClosureSet);
 
-        // 5. Queue New States
+        // 5. Neue Zustände zur Warteschlange hinzufügen, *falls sie wirklich neu sind*
         if (!dfaStateSets.has(nextStateKey) && !unprocessedKeys.has(nextStateKey)) {
           dfaStateSets.set(nextStateKey, nextNfaStateClosureSet);
-          unprocessedSets.push(nextNfaStateClosureSet);
+          unprocessedSets.push(nextNfaStateClosureSet); // Füge *neue* Zustände hinten an die Schlange an
           unprocessedKeys.add(nextStateKey);
         }
       }
+
+      // WICHTIG: Füge die *gerade verarbeitete* Zeile zum Ergebnis hinzu.
+      // Die Reihenfolge in solutionData entspricht nun der Verarbeitungsreihenfolge.
       solutionData.push(currentRow);
     }
-
-    // 6. Sort and Finalize
-    solutionData.sort((a, b) => {
-      const nameA = this.combineStateNames(a.states);
-      const nameB = this.combineStateNames(b.states);
-      if (nameA === '∅') return -1;
-      if (nameB === '∅') return 1;
-      return nameA.localeCompare(nameB);
-    });
-    solutionData.forEach((row, index) => row.id = index + 1);
-
     return solutionData;
   }
 
-  // --- Helper Functions (Copied/Adapted) ---
-
+  // --- Hilfsfunktionen (unverändert) ---
   private getStateSetKey(stateSet: Set<EndlicherState>): string {
     if (!stateSet || stateSet.size === 0) return '∅';
     return Array.from(stateSet)
@@ -242,13 +218,11 @@ export class DfaSolutionTableComponent implements OnChanges {
   }
 
   private combineStateNames(states: EndlicherState[]): string {
-    if (states.length === 1 && states[0] === this.emptyState) return this.emptyState.name;
+    if (states.length === 1 && states[0].id === this.emptyState.id) return this.emptyState.name;
     return states.map(s => s.name || `ID(${s.id})`).sort().join(',');
   }
 
-  // --- Getters for Template ---
-
-  // Provides the alphabet symbols derived from the input automaton
+  // --- Getter für das Template (unverändert) ---
   get symbols(): string[] {
     const automat = this.automat;
     if (!automat) return [];
@@ -266,32 +240,25 @@ export class DfaSolutionTableComponent implements OnChanges {
         }
       }
     }
-    return Array.from(uniqueSymbols).sort();
+    return Array.from(uniqueSymbols).sort(); // Alphabet sortieren ist ok für Spaltenreihenfolge
   }
 
-  // Provides the ID of the local empty state for template checks
   get emptyStateId(): number | string {
     return this.emptyState.id;
   }
 
-  // --- UI Color Helpers ---
-
+  // --- UI Farb-Hilfsfunktionen (unverändert) ---
   getStateColor(stateId: number | string): string {
-    if (stateId === this.emptyState.id) return '#aaaaaa'; // Consistent grey
-
-    // Use the local map built from the input automat
+    if (stateId === this.emptyState.id) return '#aaaaaa';
     const state = this.nfaStateMap.get(stateId);
     if (!state) return '#000000';
-
     const realNfaStates = Array.from(this.nfaStateMap.values())
         .filter(s => s.id !== this.emptyState.id)
         .sort((a, b) => (a.id < b.id ? -1 : 1));
     const total = realNfaStates.length;
     if (total === 0) return '#222222';
-
     const stateIndex = realNfaStates.findIndex(s => s.id === stateId);
     if (stateIndex === -1) return '#444444';
-
     const hue = Math.floor((360 / total) * stateIndex);
     return this.hslToHex(hue, 80, 45);
   }
@@ -319,7 +286,7 @@ export class DfaSolutionTableComponent implements OnChanges {
     return '#' + [R, G, B].map(val => val.toString(16).padStart(2, '0')).join('');
   }
 
-  // --- TrackBy Functions for *ngFor ---
+  // --- TrackBy Funktionen (unverändert) ---
   trackRowById(index: number, row: TableRow): number { return row.id; }
   trackSymbol(index: number, symbol: string): string { return symbol; }
   trackStateById(index: number, state: EndlicherState): number | string { return state.id ?? index; }

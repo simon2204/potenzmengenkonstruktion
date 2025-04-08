@@ -1,91 +1,84 @@
-/* Styles specific to the solution table container */
+/* Import StateBlockComponent's styles if needed */
+/* @import '../inputTable/state-block/state-block.component.scss'; */
+
+/* Container for the entire solution component */
 .solution-container {
-  // Use similar padding/background if desired, or let parent control it
-  // padding: 1.5rem;
-  // background-color: #f3f4f6; // Example background
-  font-family: system-ui, -apple-system, sans-serif; // Match font
-  margin-top: 1.5rem; // Space above the solution
+  font-family: system-ui, -apple-system, sans-serif;
+  margin-top: 1.5rem;
   padding-top: 1rem;
-  border-top: 1px solid #e0e0e0; // Separator line
+  border-top: 1px solid #e0e0e0;
 }
 
-/* Title for the solution section */
+/* NEU: Container für Header und Button */
+.solution-header-controls {
+  display: flex;
+  justify-content: space-between; /* Title left, button right */
+  align-items: center;          /* Vertically align */
+  margin-bottom: 0.5rem;        /* Space below header area */
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+  gap: 0.5rem; /* Gap between title and button if they wrap */
+}
+
+/* Title styling */
 .solution-header {
-  font-size: 1.25rem; // Match interactive table header size
+  font-size: 1.25rem;
   font-weight: 700;
-  margin-bottom: 0.5rem; // Space below title
+  margin-bottom: 0; /* Remove bottom margin as container handles it */
 }
 
 /* Note below the title */
 .solution-note {
   font-size: 0.875rem;
   font-style: italic;
-  color: #6b7280; // Slightly muted color
+  color: #6b7280;
   margin-bottom: 1rem;
 }
 
-/* Base table styles - copied from interactive table */
+/* Base table styles */
 .table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  margin-bottom: 1rem; // Reduced bottom margin slightly
+  margin-bottom: 1rem;
 }
 
-/* Header cell styles - copied */
-.table-header-first {
-  background-color: #e5e7eb;
-  text-align: left;
-  padding: 0.5rem;
-  border: 1px solid #d1d5db;
-  width: auto;
-  min-width: 150px; // Keep width constraints consistent
-  max-width: 280px;
-  font-weight: 600; // Ensure consistent font weight
-}
-
+/* Header cell styles */
+.table-header-first,
 .table-header-symbol {
   background-color: #e5e7eb;
-  text-align: center;
   padding: 0.5rem;
   border: 1px solid #d1d5db;
-  font-weight: 600; // Ensure consistent font weight
+  font-weight: 600;
+}
+.table-header-first {
+  text-align: left;
+  width: auto;
+  min-width: 150px;
+  max-width: 280px;
+}
+.table-header-symbol {
+  text-align: center;
 }
 
-/* Base data cell styles - copied, but NO interactive styles */
+/* Base data cell styles */
 .table-cell, .table-cell-first {
   box-sizing: border-box;
-  height: 3rem; /* Match height */
+  height: 3rem;
   vertical-align: top;
-  background-color: white; /* Match background */
-  padding: 0.5rem; /* Match padding */
-  border: 1px solid #d1d5db; /* Match border */
-  /* NO CURSOR POINTER */
-  text-align: left; /* Align text within the cell itself to the left */
+  background-color: white;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  text-align: left;
 }
 
-.table-cell-first {
-  /* Keep specific styles if any, e.g., slightly different background or font */
-}
-
-/* Cell content container - MODIFIED */
+/* Cell content container */
 .cell-blocks-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem; /* Match gap */
-  align-items: center; /* Align blocks vertically */
-  justify-content: flex-start; /* <<< CHANGED FROM center TO flex-start */
-  min-height: calc(3rem - 1rem); /* Ensure content area fills cell height minus padding */
-}
-
-/* Empty set text style - copied */
-.empty-text {
-  color: #9ca3af;
-  font-size: 0.875rem;
-  padding: 0.25rem 0; // Adjust padding slightly if needed
-  /* Ensure it behaves like other flex items */
-  display: inline-block; /* Or flex */
-  line-height: normal; /* Adjust if needed for vertical alignment with blocks */
+  gap: 0.25rem;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: calc(3rem - 1rem);
 }
 
 /* Loading and Error Messages */
@@ -93,18 +86,43 @@
 .error-message {
   padding: 10px 15px;
   margin: 1rem 0;
-  border-radius: 0.375rem; /* Match button radius */
+  border-radius: 0.375rem;
   text-align: center;
   font-size: 0.9em;
 }
-
 .loading-message {
-  background-color: #e5e7eb; /* Match header background */
-  color: #374151; /* Darker gray text */
+  background-color: #e5e7eb;
+  color: #374151;
+}
+.error-message {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
-.error-message {
-  background-color: #fee2e2; /* Lighter red */
-  color: #b91c1c; /* Darker red text */
-  border: 1px solid #fecaca; /* Red border */
+/* NEU: Basis Button Style (kopiert von InputTable) */
+.button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s;
+  line-height: 1; /* Konsistente Texthöhe */
+  white-space: nowrap; /* Verhindert Umbruch bei "Generiere..." */
+}
+
+/* NEU: Style für den Regenerate-Button */
+.solution-regenerate-button {
+  background-color: #6b7280; /* Sekundärfarbe (Grau) */
+  color: white;
+
+  &:hover:not(:disabled) { // Hover-Effekt nur wenn nicht deaktiviert
+    background-color: #4b5563; /* Dunkleres Grau */
+  }
+
+  &:disabled { // Style für deaktivierten Zustand
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
 }
