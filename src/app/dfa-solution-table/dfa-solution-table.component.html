@@ -1,0 +1,70 @@
+<div class="solution-container">
+    <h2>Lösung (DFA-Tabelle)</h2>
+
+    <!-- Loading Indicator -->
+    <div *ngIf="isLoading" class="loading-message">
+        Generiere Tabelle...
+    </div>
+
+    <!-- Error Message -->
+    <div *ngIf="errorMsg && !isLoading" class="error-message">
+        {{ errorMsg }}
+    </div>
+
+    <!-- Solution Table (only shown when data is ready and no error) -->
+    <div *ngIf="!isLoading && !errorMsg && solutionTableData && solutionTableData.length > 0; else noData">
+        <p><i>(Diese Tabelle ist nicht interaktiv)</i></p>
+        <table class="table solution-table">
+            <colgroup>
+                <col style="width: auto;">
+                <col *ngFor="let symbol of symbols; trackBy: trackSymbol" style="width: 1fr;">
+            </colgroup>
+            <thead>
+            <tr>
+                <th class="table-header-first">SDFA</th>
+                <th *ngFor="let symbol of symbols; trackBy: trackSymbol" class="table-header-symbol">{{ symbol }}</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr *ngFor="let row of solutionTableData; trackBy: trackRowById">
+                <!-- State Column (Read Only) -->
+                <td class="table-cell-first">
+                    <div class="cell-blocks-container">
+                        <div *ngIf="row.states.length === 1 && row.states[0].id === emptyStateId" class="empty-text">∅</div>
+                        <ng-container *ngIf="!(row.states.length === 1 && row.states[0].id === emptyStateId)">
+                            <app-state-block *ngFor="let state of row.states; trackBy: trackStateById"
+                                             [state]="state.name"
+                                             [color]="getStateColor(state.id)">
+                            </app-state-block>
+                        </ng-container>
+                        <app-state-block *ngFor="let markerId of row.markers; trackBy: trackMarkerId"
+                                         [state]="markerId"
+                                         [color]="getMarkerColor(markerId)">
+                        </app-state-block>
+                    </div>
+                </td>
+                <!-- Transition Columns (Read Only) -->
+                <td *ngFor="let symbol of symbols; trackBy: trackSymbol" class="table-cell">
+                    <div class="cell-blocks-container">
+                        <div *ngIf="!row.transitions[symbol] || row.transitions[symbol]?.length === 0 || (row.transitions[symbol]?.length === 1 && row.transitions[symbol][0].id === emptyStateId)" class="empty-text">∅</div>
+                        <ng-container *ngIf="row.transitions[symbol] && row.transitions[symbol].length > 0 && !(row.transitions[symbol].length === 1 && row.transitions[symbol][0].id === emptyStateId)">
+                            <app-state-block *ngFor="let state of row.transitions[symbol]; trackBy: trackStateById"
+                                             [state]="state.name"
+                                             [color]="getStateColor(state.id)">
+                            </app-state-block>
+                        </ng-container>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Template shown if no data is available after loading/initial check -->
+    <ng-template #noData>
+        <div *ngIf="!isLoading && !errorMsg">
+            Keine Lösungsdaten verfügbar. Stellen Sie sicher, dass ein gültiger Automat übergeben wurde.
+        </div>
+    </ng-template>
+
+</div>
