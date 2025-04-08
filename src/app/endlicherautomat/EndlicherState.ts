@@ -1,11 +1,10 @@
-//Dieser Code stammt aus dem vorgegebenen Projekt "Endlicher Automat"
-
 import { State } from '../../../statemachine/src/lib/statemachine/state';
 import { Transition } from '../../../statemachine/src/lib/statemachine/stateconnections/Transition';
 import { EndlicherAutomat } from './EndlicherAutomat';
 import { EndlicheTransition } from './EndlicheTransition';
 
 export class EndlicherState extends State {
+
   override transitions: EndlicheTransition[] = [];
 
   override makeTransition(destination: EndlicherState): Transition {

@@ -1,11 +1,10 @@
-import {AfterViewInit, Component, OnInit} from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StateBlockComponent } from "./state-block/state-block.component";
-
-interface StateItem {
-  id: string;
-  color: string;
-}
+import {EndlicherState} from "../endlicherautomat/EndlicherState";
+import {StatemachineService} from "../../../statemachine/src/lib/statemachine/statemachine.service";
+import {EndlicheTransition} from "../endlicherautomat/EndlicheTransition";
+import {Point} from "../../../statemachine/src/lib/statemachine/drawingprimitives/Point";
 
 interface MarkerItem {
   id: string;
@@ -15,9 +14,9 @@ interface MarkerItem {
 
 interface TableRow {
   id: number;
-  states: string[];
+  states: EndlicherState[];
   markers: string[];
-  transitions: { [symbol: string]: string[] };
+  transitions: { [symbol: string]: EndlicherState[] };
 }
 
 @Component({
@@ -27,13 +26,13 @@ interface TableRow {
   standalone: true,
   imports: [CommonModule, StateBlockComponent]
 })
-export class InputTableComponent implements OnInit, AfterViewInit {
-  // Verfügbare Zustände und ihre Farben
-  availableStates: StateItem[] = [
-    { id: 'S0', color: '#2563eb' },
-    { id: 'S1', color: '#16a34a' },
-    { id: 'S2', color: '#9333ea' }
-  ];
+export class InputTableComponent {
+
+  private emptyState: EndlicherState;
+
+  get availableStates(): EndlicherState[] {
+    return [this.emptyState,  ...this.service.states as EndlicherState[]];
+  }
 
   // Spezielle Markierungen
   markers: MarkerItem[] = [
@@ -41,55 +40,35 @@ export class InputTableComponent implements OnInit, AfterViewInit {
     { id: '(E)', label: 'E', color: '#ef4444' }
   ];
 
-  // Symbole für die Tabellenüberschrift
-  symbols: string[] = ['0', '1'];
+  get symbols(): string[] {
+    const uniqueSymbols: Set<string> = new Set();
+    for (const transition of this.service.transitions) {
+      for (const symbol of (transition as EndlicheTransition).transitionSymbols) {
+        uniqueSymbols.add(symbol);
+      }
+    }
+    return Array.from(uniqueSymbols).sort();
+  }
 
   // Tabellendaten
-  tableData: TableRow[] = [
-    {
-      id: 1,
-      states: ['S0'],
-      markers: ['(A)'],
-      transitions: { '0': ['S0'], '1': ['S1'] }
-    },
-    {
-      id: 2,
-      states: ['S1'],
-      markers: [],
-      transitions: { '0': [], '1': ['S2'] }
-    },
-    {
-      id: 3,
-      states: ['S2'],
-      markers: ['(E)'],
-      transitions: { '0': ['S0'], '1': ['S2'] }
-    }
-  ];
+  tableData: TableRow[] = [];
 
   // Aktive Zelle zum Bearbeiten
   activeCell: number | null = null;
   // Typ der aktiven Zelle: 'state' (für Zustandszeile) oder ein Symbol ('0', '1')
   activeCellType: string | null = null;
 
-  ngOnInit(): void {
-    const totalStates = 10; // Beispiel: 10 Zustände
-    const dynamicColors = this.generateColors(totalStates);
+  constructor(public service: StatemachineService) {
+    this.tableData.push({
+      id: 1,
+      states: [],
+      markers: [],
+      transitions: this.getDefaultTransitions()
+    })
 
-    // Hier könntest du dann die Zustände mit den generierten Farben initialisieren
-    this.availableStates = dynamicColors.map((color, index) => ({
-      id: `S${index}`,
-      color: color
-    }));
-  }
-
-  // Erzeugt ein Array von Hex-Farben für eine gegebene Anzahl von Zuständen
-  generateColors(total: number): string[] {
-    const colors: string[] = [];
-    for (let i = 0; i < total; i++) {
-      const hue = Math.floor((360 / total) * i);
-      colors.push(this.hslToHex(hue, 80, 40));
-    }
-    return colors;
+    const state = new EndlicherState(Point.zero, 0.5);
+    state.name = "∅";
+    this.emptyState = state;
   }
 
   // Konvertiert HSL-Werte in einen Hex-Farbstring
@@ -125,20 +104,6 @@ export class InputTableComponent implements OnInit, AfterViewInit {
         .join('');
   }
 
-  ngAfterViewInit() {
-    // Stelle sicher, dass nur die Zellen selbst fokussierbar sind
-    const cells = document.querySelectorAll('td');
-    cells.forEach(cell => {
-      cell.tabIndex = 0;
-      // Entferne tabindex von allen Kindelementen
-      cell.querySelectorAll('*').forEach(child => {
-        if(child.hasAttribute('tabindex')) {
-          child.removeAttribute('tabindex');
-        }
-      });
-    });
-  }
-
   // Eine Zelle auswählen
   selectCell(rowId: number, type: string): void {
     this.activeCell = rowId;
@@ -160,64 +125,202 @@ export class InputTableComponent implements OnInit, AfterViewInit {
     });
   }
 
-  // Zustand zu einer Zelle hinzufügen oder entfernen, wenn er bereits existiert
-  addStateToCell(stateId: string): void {
+  // Helper zum Erzeugen der nächsten Zeilen-ID
+  private getNextRowId(): number {
+    return this.tableData.reduce((max, row) => Math.max(max, row.id), 0) + 1;
+  }
+
+  private numberOfRowsNeeded(): number {
+    // Sammle alle eindeutigen State-Sets aus den Übergangszellen.
+    const transitionStateSets = new Set<string>();
+
+    if (this.tableData.length > 0) {
+      const firstCell = this.tableData[0].states
+      transitionStateSets.add(this.combineToOneState(firstCell));
+    }
+
+    for (const row of this.tableData) {
+      for (const symbol of Object.keys(row.transitions)) {
+        const states = row.transitions[symbol];
+        if (states.length > 0) {
+          const stateSet = this.combineToOneState(states);
+          transitionStateSets.add(stateSet);
+        }
+      }
+    }
+    // Erste Zeile soll immer vorhanden sein.
+    return transitionStateSets.size > 0 ? transitionStateSets.size : 1;
+  }
+
+  private combineToOneState(states: EndlicherState[]): string {
+    return states.map(s => s.id).sort().join(',');
+  }
+
+  private adjustRowCount(): void {
+    const currentRows = this.tableData.length
+    const rowsNeeded = this.numberOfRowsNeeded();
+    const missingRows = rowsNeeded - currentRows;
+
+    // Füge leere Zeilen hinzu.
+    for (let i = 0; i < missingRows; i++) {
+      this.tableData.push({
+        id: this.getNextRowId(),
+        states: [],
+        markers: [],
+        transitions: this.getDefaultTransitions()
+      });
+    }
+
+    // Entferne die letzten leeren Zeilen, die zu viel sind.
+    for (let i = missingRows; i < 0; i++) {
+      const lastRow = this.tableData[this.tableData.length - 1]
+      if (this.isRowEmpty(lastRow)) {
+        this.tableData.pop();
+      }
+    }
+
+    console.log(missingRows);
+  }
+
+  private isRowEmpty(row: TableRow): boolean {
+    // Eine Zeile ist leer, wenn keine Zustände, keine Markierungen und alle Übergänge leer sind.
+    if (row.states.length > 0 || row.markers.length > 0) {
+      return false;
+    }
+    return Object.values(row.transitions).every(transitionArray => transitionArray.length === 0);
+  }
+
+  addStateToCell(state: EndlicherState): void {
     if (!this.activeCell || !this.activeCellType) return;
 
-    this.tableData = this.tableData.map(row => {
-      if (row.id === this.activeCell) {
-        if (this.activeCellType === 'state') {
-          // Zustand zur Zustandsspalte hinzufügen/entfernen (toggle)
-          const hasState = row.states.includes(stateId);
+    if (this.activeCellType === 'state') {
+      // Toggle in der linken Spalte
+      this.tableData = this.tableData.map(row => {
+        if (row.id === this.activeCell) {
+          const hasState = row.states.includes(state);
           return {
             ...row,
             states: hasState
-                ? row.states.filter(s => s !== stateId)
-                : [...row.states, stateId]
+                ? row.states.filter(s => s.id !== state.id)
+                : [...row.states, state]
           };
-        } else {
-          // Zustand zur Übergangsspalte hinzufügen/entfernen (toggle)
-          const symbol = this.activeCellType as string;
-          const hasState = row.transitions[symbol]?.includes(stateId);
+        }
+        return row;
+      });
+    } else {
+      // Toggle in der Übergangszelle
+      const symbol = this.activeCellType as string;
+      this.tableData = this.tableData.map(row => {
+        if (row.id === this.activeCell) {
+          const currentStates = row.transitions[symbol] || [];
+          const hasState = currentStates.includes(state);
+          const updatedStates = hasState
+              ? currentStates.filter(s => s.id !== state.id)
+              : [...currentStates, state];
           return {
             ...row,
             transitions: {
               ...row.transitions,
-              [symbol]: hasState
-                  ? row.transitions[symbol].filter(s => s !== stateId)
-                  : [...row.transitions[symbol], stateId]
+              [symbol]: updatedStates
             }
           };
         }
+        return row;
+      });
+    }
+
+    // Nach jedem Edit prüfen, wie viele leere Zeilen benötigt werden.
+    this.adjustRowCount();
+  }
+
+  private updateEmptyRows(): void {
+    // Sammle alle eindeutigen State-Sets aus den linken Zellen.
+    const leftStateSets = new Set<string>();
+    for (const row of this.tableData) {
+      if (row.states.length > 0) {
+        const sortedIds = row.states.map(s => s.id).sort();
+        leftStateSets.add(sortedIds.join(','));
       }
-      return row;
-    });
+    }
+
+    // Sammle alle eindeutigen State-Sets aus den Übergangszellen.
+    const transitionStateSets = new Set<string>();
+    for (const row of this.tableData) {
+      for (const symbol of Object.keys(row.transitions)) {
+        const states = row.transitions[symbol];
+        if (states.length > 0) {
+          const sortedIds = states.map(s => s.id).sort();
+          transitionStateSets.add(sortedIds.join(','));
+        }
+      }
+    }
+
+    // Bestimme, wie viele leere Zeilen benötigt werden:
+    // Jede transition-States-Menge, die noch nicht in den linken Zellen vorkommt, soll eine leere Zeile darstellen.
+    let missingCount = 0;
+    for (const ts of transitionStateSets) {
+      if (!leftStateSets.has(ts)) {
+        missingCount++;
+      }
+    }
+
+    // Zähle die aktuell vorhandenen leeren Zeilen.
+    const emptyRows = this.tableData.filter(row => row.states.length === 0);
+    const currentEmptyCount = emptyRows.length;
+
+    if (currentEmptyCount < missingCount) {
+      // Fehlende leere Zeilen hinzufügen.
+      const diff = missingCount - currentEmptyCount;
+      for (let i = 0; i < diff; i++) {
+        this.tableData.push({
+          id: this.getNextRowId(),
+          states: [],
+          markers: [],
+          transitions: this.getDefaultTransitions()
+        });
+      }
+    } else if (currentEmptyCount > missingCount) {
+      // Überschüssige leere Zeilen entfernen.
+      let toRemove = currentEmptyCount - missingCount;
+      // Entferne leere Zeilen – zum Beispiel von hinten:
+      this.tableData = this.tableData.filter(row => {
+        if (row.states.length === 0 && toRemove > 0) {
+          toRemove--;
+          return false;
+        }
+        return true;
+      });
+    }
   }
 
   // Zustand aus einer Zelle entfernen
-  removeStateFromCell(rowId: number, stateId: string): void {
+  removeStateFromCell(rowId: number, state: EndlicherState): void {
     this.tableData = this.tableData.map(row => {
       if (row.id === rowId) {
-        return { ...row, states: row.states.filter(s => s !== stateId) };
+        return { ...row, states: row.states.filter(s => s.id !== state.id) };
       }
       return row;
     });
+
+    this.adjustRowCount();
   }
 
   // Zustand aus einer Übergangszelle entfernen
-  removeTransitionState(rowId: number, symbol: string, stateId: string): void {
+  removeTransitionState(rowId: number, symbol: string, state: EndlicherState): void {
     this.tableData = this.tableData.map(row => {
       if (row.id === rowId) {
         return {
           ...row,
           transitions: {
             ...row.transitions,
-            [symbol]: row.transitions[symbol].filter(s => s !== stateId)
+            [symbol]: row.transitions[symbol].filter(s => s.id !== state.id)
           }
         };
       }
       return row;
     });
+
+    this.updateEmptyRows();
   }
 
   // Markierung zu einer Zelle hinzufügen/entfernen
@@ -242,16 +345,21 @@ export class InputTableComponent implements OnInit, AfterViewInit {
       ...row,
       states: [],
       markers: [],
-      transitions: Object.fromEntries(this.symbols.map(symbol => [symbol, []]))
+      transitions: this.getDefaultTransitions()
     }));
     this.activeCell = null;
     this.activeCellType = null;
   }
 
+  private getDefaultTransitions(): { [symbol: string]: EndlicherState[] } {
+    return Object.fromEntries(this.symbols.map(symbol => [symbol, []]));
+  }
+
   // Zustandsfarbe finden
-  getStateColor(stateId: string): string {
-    const state = this.availableStates.find(s => s.id === stateId);
-    return state ? state.color : '#000000';
+  getStateColor(stateId: number): string {
+    const total = this.availableStates.length;
+    const hue = Math.floor((360 / total) * stateId);
+    return this.hslToHex(hue, 80, 40)
   }
 
   // Markierungsfarbe finden
