@@ -157,7 +157,7 @@ export class DfaSolutionTableComponent implements OnChanges {
         transitions: {}
       };
 
-      // 3. Marker bestimmen (wie zuvor)
+      // 3. Marker bestimmen
       if (currentStateKey === startStateKey) {
         currentRow.markers.push('(A)');
       }
@@ -191,18 +191,18 @@ export class DfaSolutionTableComponent implements OnChanges {
       }
 
       // WICHTIG: Füge die *gerade verarbeitete* Zeile zum Ergebnis hinzu.
-      // Die Reihenfolge in solutionData entspricht nun der Verarbeitungsreihenfolge.
+      // Die Reihenfolge in solutionData entspricht der Verarbeitungsreihenfolge.
       solutionData.push(currentRow);
     }
     return solutionData;
   }
 
-  // --- Hilfsfunktionen (unverändert) ---
+  // --- Hilfsfunktionen ---
   private getStateSetKey(stateSet: Set<EndlicherState>): string {
     if (!stateSet || stateSet.size === 0) return '∅';
     return Array.from(stateSet)
         .map(s => s.id ?? 'undef')
-        .sort((a, b) => (typeof a === 'number' && typeof b === 'number' ? a - b : String(a).localeCompare(String(b))))
+        .sort((a, b) => (a - b))
         .join(',');
   }
 
@@ -212,17 +212,11 @@ export class DfaSolutionTableComponent implements OnChanges {
         .sort((a, b) => {
           const idA = a.id ?? -Infinity;
           const idB = b.id ?? -Infinity;
-          if (typeof idA === 'number' && typeof idB === 'number') return idA - idB;
-          return String(idA).localeCompare(String(idB));
+          return idA - idB;
         });
   }
 
-  private combineStateNames(states: EndlicherState[]): string {
-    if (states.length === 1 && states[0].id === this.emptyState.id) return this.emptyState.name;
-    return states.map(s => s.name || `ID(${s.id})`).sort().join(',');
-  }
-
-  // --- Getter für das Template (unverändert) ---
+  // --- Getter für das Template ---
   get symbols(): string[] {
     const automat = this.automat;
     if (!automat) return [];
@@ -243,7 +237,7 @@ export class DfaSolutionTableComponent implements OnChanges {
     return Array.from(uniqueSymbols).sort(); // Alphabet sortieren ist ok für Spaltenreihenfolge
   }
 
-  // --- UI Farb-Hilfsfunktionen (unverändert) ---
+  // --- UI Farb-Hilfsfunktionen ---
   getStateColor(stateId: number | string): string {
     if (stateId === this.emptyState.id) return '#aaaaaa';
     const state = this.nfaStateMap.get(stateId);
@@ -282,7 +276,7 @@ export class DfaSolutionTableComponent implements OnChanges {
     return '#' + [R, G, B].map(val => val.toString(16).padStart(2, '0')).join('');
   }
 
-  // --- TrackBy Funktionen (unverändert) ---
+  // --- TrackBy Funktionen ---
   trackRowById(index: number, row: TableRow): number { return row.id; }
   trackSymbol(index: number, symbol: string): string { return symbol; }
   trackStateById(index: number, state: EndlicherState): number | string { return state.id ?? index; }
