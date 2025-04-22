@@ -1,3 +1,4 @@
+// Add base styles first
 .state-block {
   display: inline-flex;
   align-items: center;
@@ -6,7 +7,40 @@
   font-size: 0.875rem;
   font-weight: 500;
   user-select: none;
+  transition: background-color 0.3s, color 0.3s, text-decoration 0.3s; // Add transitions
+  border: 1px solid transparent; // Base border
 }
+
+// Styles for different statuses (using HostBinding classes)
+:host(.correct) .state-block {
+  // background-color: #dcfce7; // Light green (or use getBackgroundColor)
+  // color: #16a34a; // Green
+  border-color: #16a34a; // Green border
+  font-weight: 600;
+}
+
+:host(.incorrect) .state-block {
+  // background-color: #fee2e2; // Light red (or use getBackgroundColor)
+  // color: #dc2626; // Red
+  border-color: #dc2626; // Red border
+  text-decoration: line-through; // Strikethrough
+  text-decoration-color: #b91c1c; // Darker red for strikethrough
+  text-decoration-thickness: 2px;
+  font-weight: 600;
+}
+
+:host(.missing) .state-block {
+  // background-color: #ccfbf1; // Light teal (or use getBackgroundColor)
+  // color: #0d9488; // Teal
+  border-color: #0d9488; // Teal border
+  font-weight: 600;
+  font-style: italic;
+}
+
+:host(.original) .state-block {
+  // Default styling (handled by base and getBackgroundColor/getTextColor)
+}
+
 
 .state-remove-btn {
   margin-left: 0.25rem;
@@ -20,7 +54,12 @@
   color: currentColor;
   opacity: 0.7;
 
-  &:hover {
+  &:hover:not(:disabled) { // Only hover effect if not disabled
     opacity: 1;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
   }
 }

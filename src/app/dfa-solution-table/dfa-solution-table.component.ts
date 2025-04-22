@@ -2,167 +2,195 @@ import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { EndlicherAutomat } from '../endlicherautomat/EndlicherAutomat';
 import { EndlicherState } from '../endlicherautomat/EndlicherState';
+import { EndlicheTransition } from '../endlicherautomat/EndlicheTransition'; // Import needed for symbol extraction
 import { Point } from '../../../statemachine/src/lib/statemachine/drawingprimitives/Point';
-import { StateBlockComponent } from "../inputTable/state-block/state-block.component";
+import { StateBlockComponent } from "../inputTable/state-block/state-block.component"; // Import StateBlockComponent
 
-// Interface für die Struktur einer Tabellenzeile
-interface TableRow {
-  id: number;
-  states: EndlicherState[];
-  markers: string[];
-  transitions: { [symbol: string]: EndlicherState[] };
+// Interface für die Struktur einer Tabellenzeile (Lösung)
+// Kann auch in eine separate Datei ausgelagert und importiert werden
+export interface SolutionTableRow {
+  id: number; // Eindeutige ID für ngFor tracking
+  states: EndlicherState[]; // Zustände dieser DFA-Zeile
+  markers: string[]; // Marker wie '(A)', '(E)'
+  transitions: { [symbol: string]: EndlicherState[] }; // Übergänge für jedes Symbol
 }
 
 // Interface für Marker-Definitionen
-interface MarkerItem {
-  id: string;
-  label: string;
+// Kann auch in eine separate Datei ausgelagert und importiert werden
+export interface MarkerItem {
+  id: string; // z.B. '(A)'
+  label: string; // z.B. 'A'
   color: string;
 }
+
 
 @Component({
   selector: 'app-dfa-solution-table',
   templateUrl: './dfa-solution-table.component.html',
   styleUrls: ['./dfa-solution-table.component.scss'],
   standalone: true,
-  imports: [ CommonModule, StateBlockComponent ]
+  imports: [ CommonModule, StateBlockComponent ] // Stelle sicher, dass CommonModule und StateBlockComponent importiert sind
 })
 export class DfaSolutionTableComponent implements OnChanges {
 
   @Input() automat: EndlicherAutomat | null = null;
 
-  solutionTableData: TableRow[] | null = null;
+  // Daten für die Anzeige *dieser* Komponente
+  solutionTableData: SolutionTableRow[] | null = null;
   isLoading: boolean = false;
   errorMsg: string | null = null;
 
-  private readonly emptyState: EndlicherState;
-  private nfaStateMap = new Map<number | string, EndlicherState>();
-  private readonly markers: MarkerItem[] = [
-    { id: '(A)', label: 'A', color: '#f59e0b' },
-    { id: '(E)', label: 'E', color: '#ef4444' }
+  // Diese müssen public sein oder über public Methoden zugänglich,
+  // damit InputTableComponent darauf zugreifen kann.
+  public readonly emptyState: EndlicherState;
+  public nfaStateMap = new Map<number | string, EndlicherState>(); // Map von NFA State ID -> NFA State Objekt
+  public readonly markers: MarkerItem[] = [ // Konsistent mit InputTable halten
+    { id: '(A)', label: 'A', color: '#f59e0b' }, // Startzustandsmarker
+    { id: '(E)', label: 'E', color: '#ef4444' }  // Endzustandsmarker
   ];
 
   constructor() {
-    const empty = new EndlicherState(Point.zero, -1);
+    // Leerer Zustand initialisieren (gleiche ID wie in InputTable verwenden!)
+    const empty = new EndlicherState(Point.zero, -1); // ID -1 für leeren Zustand
     empty.name = "∅";
     this.emptyState = empty;
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['automat']) {
-      this.regenerateTable();
+    // Wenn sich der Input-Automat ändert, die Anzeige dieser Tabelle neu generieren
+    if (changes['automat'] && this.automat) {
+      this.triggerTableGenerationForDisplay();
+    } else if (changes['automat'] && !this.automat) {
+      // Wenn der Automat entfernt wird, Tabelle leeren
+      this.solutionTableData = null;
+      this.errorMsg = "Kein Automat vorhanden.";
+      this.isLoading = false;
     }
   }
 
-  // Trigger regeneration (public for button click)
-  regenerateTable(): void { // Made public
-    this.isLoading = true;
-    this.solutionTableData = null;
-    this.errorMsg = null;
+  // --- Öffentliche Methoden für InputTableComponent ---
 
-    setTimeout(() => {
-      if (this.automat) {
-        try {
-          this.buildNfaStateMap();
-          this.solutionTableData = this.generateSolutionTableDataInternal();
-          if (!this.solutionTableData || this.solutionTableData.length === 0) {
-            this.errorMsg = "Keine Zustände im resultierenden DFA gefunden oder Startzustand problematisch.";
-          }
-        } catch (error: any) {
-          console.error("Fehler bei Generierung der DFA-Lösungstabelle:", error);
-          this.errorMsg = `Fehler beim Generieren der Tabelle: ${error.message || error}`;
-          this.solutionTableData = null;
-        }
-      } else {
-        this.errorMsg = "Kein Automat für die Generierung vorhanden.";
-        this.solutionTableData = null;
-      }
-      this.isLoading = false;
-    });
-  }
-
-  private buildNfaStateMap(): void {
+  /**
+   * Baut die interne Map der NFA-Zustände auf.
+   * Muss vor `generateSolutionTableDataInternal` aufgerufen werden.
+   * Ist public, damit InputTableComponent sie bei Bedarf aufrufen kann.
+   */
+  public buildNfaStateMap(): void {
     this.nfaStateMap.clear();
+    // Wichtig: Den leeren Zustand immer hinzufügen
+    this.nfaStateMap.set(this.emptyState.id, this.emptyState);
+
     if (this.automat && this.automat.getAllStates()) {
-      this.nfaStateMap.set(this.emptyState.id, this.emptyState);
       this.automat.getAllStates().forEach(state => {
         if (state && typeof state.id !== 'undefined') {
+          // Stelle sicher, dass es EndlicherState-Instanzen sind
           this.nfaStateMap.set(state.id, state as EndlicherState);
+        } else {
+          console.warn("DFA Solution Table: Zustand ohne ID gefunden:", state);
         }
       });
+    } else {
+      console.warn("DFA Solution Table: buildNfaStateMap aufgerufen ohne Automat oder Zustände.");
     }
   }
 
-  // --- Kernlogik: Potenzmengenkonstruktion ---
-  private generateSolutionTableDataInternal(): TableRow[] | null {
+  /**
+   * Kernlogik: Potenzmengenkonstruktion.
+   * Diese Methode führt die Berechnung synchron durch und gibt das Ergebnis zurück oder wirft einen Fehler.
+   * Ist public, damit InputTableComponent sie für den Vergleich nutzen kann.
+   * Stellt sicher, dass buildNfaStateMap vorher aufgerufen wurde.
+   */
+  public generateSolutionTableDataInternal(): SolutionTableRow[] { // Gibt Array zurück, wirft Fehler bei Problemen
+    // 1. Vorbedingungen prüfen
     const nfa = this.automat;
-    if (!nfa || !nfa.startState || !(nfa.startState instanceof EndlicherState)) {
-      console.error("DFA Solution Table: NFA, Startzustand nicht gefunden oder ungültig.");
-      return null;
+    if (!nfa) {
+      console.error("DFA Solution Table Internal: Kein Automat (NFA) vorhanden.");
+      throw new Error("Kein Automat (NFA) für die Generierung vorhanden.");
     }
-    if (this.nfaStateMap.size <= 1 && nfa.getAllStates().length > 0) {
-      console.warn("DFA Solution Table: NFA state map scheint unvollständig.");
+    // buildNfaStateMap muss aufgerufen worden sein! Ggf. hier nochmal sicherstellen?
+    // Normalerweise ruft InputTableComponent erst buildNfaStateMap und dann diese Methode auf.
+    // Wir können hier einen Check einbauen:
+    if (this.nfaStateMap.size === 0 || (this.nfaStateMap.size === 1 && this.nfaStateMap.has(this.emptyState.id) && nfa.getAllStates().length > 0) ) {
+      console.warn("DFA Solution Table Internal: NFA State Map scheint leer oder unvollständig. Versuche erneuten Aufbau.");
+      this.buildNfaStateMap(); // Versuch, die Map zu bauen
+      if (this.nfaStateMap.size === 0 || (this.nfaStateMap.size === 1 && this.nfaStateMap.has(this.emptyState.id) && nfa.getAllStates().length > 0)) {
+        console.error("DFA Solution Table Internal: NFA State Map konnte nicht korrekt aufgebaut werden.");
+        throw new Error("Interner Fehler: NFA Zustands-Map konnte nicht erstellt werden.");
+      }
+    }
+    if (!nfa.startState || !(nfa.startState instanceof EndlicherState)) {
+      console.error("DFA Solution Table Internal: NFA-Startzustand nicht gefunden oder ungültig.");
+      // Wenn kein Startzustand, kann keine Tabelle generiert werden.
+      // Rückgabe einer leeren Tabelle oder Fehler? Fehler ist deutlicher.
+      throw new Error("NFA-Startzustand ist nicht definiert oder ungültig.");
     }
 
-    const solutionData: TableRow[] = []; // Das Ergebnis-Array wird in Verarbeitungsreihenfolge gefüllt
-    let rowIdCounter = 1; // Für eindeutige IDs in der Reihenfolge der Verarbeitung
 
-    // Map zur Verfolgung der DFA-Zustandsmengen (bereits entdeckt)
+    // 2. Initialisierung der Potenzmengenkonstruktion
+    const solutionData: SolutionTableRow[] = []; // Das Ergebnis-Array
+    let rowIdCounter = 1; // Für eindeutige IDs der Lösungszeilen
+
+    // Map zur Verfolgung der DFA-Zustandsmengen (als String-Key -> Set<EndlicherState>)
     const dfaStateSets = new Map<string, Set<EndlicherState>>();
-    // Warteschlange (FIFO) für noch zu verarbeitende NFA-Zustandsmengen
+    // Warteschlange (FIFO) für noch zu verarbeitende NFA-Zustandsmengen (als Set<EndlicherState>)
     const unprocessedSets: Set<EndlicherState>[] = [];
-    // Set zur Verfolgung bereits zur Warteschlange hinzugefügter Schlüssel
+    // Set zur Verfolgung der String-Keys der Mengen, die bereits zur Warteschlange hinzugefügt wurden (verhindert Doppelungen)
     const unprocessedKeys = new Set<string>();
 
-    // 1. Startzustand des DFA bestimmen
+    // 3. Startzustand des DFA bestimmen (ε-Hülle des NFA-Startzustands)
     const startNfaStates = new Set([nfa.startState as EndlicherState]);
-    const startStateClosureSet = new Set(EndlicherState.eClosure2(startNfaStates));
-    const startStateKey = this.getStateSetKey(startStateClosureSet);
+    const startStateClosureSet = new Set(EndlicherState.eClosure2(startNfaStates)); // Nutze die statische Methode
+    const startStateKey = this.getStateSetKey(startStateClosureSet); // Eindeutiger String-Key für diese Menge
 
-    // Nur fortfahren, wenn der Startzustand nicht selbst die leere Menge ist
+    // 4. Startzustand zur Verarbeitung hinzufügen (wenn nicht leer)
     if (startStateKey !== '∅') {
-      dfaStateSets.set(startStateKey, startStateClosureSet);
-      unprocessedSets.push(startStateClosureSet); // Startzustand in die Warteschlange
-      unprocessedKeys.add(startStateKey);
+      dfaStateSets.set(startStateKey, startStateClosureSet); // Menge merken
+      unprocessedSets.push(startStateClosureSet);         // Zur Warteschlange hinzufügen
+      unprocessedKeys.add(startStateKey);                  // Key merken
     } else {
       // Sonderfall: Selbst die ε-Hülle des Startzustands ist leer.
-      console.warn("DFA Solution Table: Startzustand ε-Hülle ist leer.");
-      const emptyRow: TableRow = {
+      // Das bedeutet, der DFA hat nur den Fehlerzustand (leere Menge).
+      console.warn("DFA Solution Table: Startzustand ε-Hülle ist leer. Erzeuge nur ∅-Zustand.");
+      const emptyRow: SolutionTableRow = {
         id: rowIdCounter++, // ID 1
-        states: [this.emptyState],
-        markers: [],
-        transitions: {}
+        states: [this.emptyState], // Zustand ist die leere Menge
+        markers: [], // Keine Marker
+        transitions: {} // Übergänge initialisieren
       };
-      const alphabet = this.symbols;
+      const alphabet = this.symbols; // Alphabet holen
       for (const symbol of alphabet) {
-        emptyRow.transitions[symbol] = [this.emptyState];
+        emptyRow.transitions[symbol] = [this.emptyState]; // Leere Menge führt für alle Symbole zur leeren Menge
       }
       solutionData.push(emptyRow);
-      return solutionData; // Nur die leere Menge zurückgeben
+      return solutionData; // Nur die Zeile für die leere Menge zurückgeben
     }
 
-    const alphabet = this.symbols;
+    // 5. Alphabet des NFA bestimmen (ohne Epsilon)
+    const alphabet = this.symbols; // Nutze den Getter
 
-    // 2. Zustände iterativ verarbeiten, solange die Warteschlange nicht leer ist
+    // 6. Zustände iterativ verarbeiten (Breitensuche)
     while (unprocessedSets.length > 0) {
       // Nächste Zustandsmenge aus der Warteschlange holen (FIFO)
-      const currentNfaStatesSet = unprocessedSets.shift()!; // shift() für FIFO
+      const currentNfaStatesSet = unprocessedSets.shift()!;
       const currentStateKey = this.getStateSetKey(currentNfaStatesSet);
 
       // TableRow-Objekt für diesen *gerade verarbeiteten* DFA-Zustand erstellen
-      const currentRow: TableRow = {
+      const currentRow: SolutionTableRow = {
         id: rowIdCounter++, // ID in Verarbeitungsreihenfolge zuweisen
-        states: this.getStatesFromSet(currentNfaStatesSet),
-        markers: [],
-        transitions: {}
+        states: this.getStatesFromSet(currentNfaStatesSet), // NFA-Zustände für diese Zeile holen und sortieren
+        markers: [], // Marker initialisieren
+        transitions: {} // Übergänge initialisieren
       };
 
-      // 3. Marker bestimmen
+      // 7. Marker bestimmen
+      // Startzustands-Marker?
       if (currentStateKey === startStateKey) {
         currentRow.markers.push('(A)');
       }
+      // Endzustands-Marker? (Wenn *irgendein* NFA-Zustand in der Menge ein Endzustand ist)
       let isFinal = false;
       for (const nfaState of currentNfaStatesSet) {
+        // Prüfe, ob der NFA diesen Zustand als Endzustand kennt
         if (nfa.finalStates.has(nfaState)) {
           isFinal = true;
           break;
@@ -171,114 +199,292 @@ export class DfaSolutionTableComponent implements OnChanges {
       if (isFinal) {
         currentRow.markers.push('(E)');
       }
-      currentRow.markers.sort();
+      currentRow.markers.sort(); // Konsistente Reihenfolge der Marker
 
-      // 4. Übergänge für jedes Symbol im Alphabet berechnen
+      // 8. Übergänge für jedes Symbol im Alphabet berechnen
       for (const symbol of alphabet) {
-        const movedStates = EndlicherState.move2(Array.from(currentNfaStatesSet), symbol);
-        const nextNfaStateClosureSet = new Set(EndlicherState.eClosure2(new Set(movedStates)));
-        const nextStateKey = this.getStateSetKey(nextNfaStateClosureSet);
+        // a) 'move'-Operation: Finde alle NFA-Zustände, die von der aktuellen Menge aus mit 'symbol' erreichbar sind
+        const movedStates = EndlicherState.move2(Array.from(currentNfaStatesSet), symbol); // Nutze statische Methode
 
-        // Übergangsziel in der aktuellen Zeile speichern
+        // b) 'ε-closure'-Operation: Berechne die ε-Hülle der erreichten Zustände
+        const nextNfaStateClosureSet = new Set(EndlicherState.eClosure2(new Set(movedStates))); // Nutze statische Methode
+        const nextStateKey = this.getStateSetKey(nextNfaStateClosureSet); // Eindeutiger Key für die Zielmenge
+
+        // c) Übergangsziel in der aktuellen Zeile speichern (als sortierte Liste von EndlicherState)
         currentRow.transitions[symbol] = this.getStatesFromSet(nextNfaStateClosureSet);
 
-        // 5. Neue Zustände zur Warteschlange hinzufügen, *falls sie wirklich neu sind*
+        // d) Neue Zustandsmenge zur Warteschlange hinzufügen, falls sie noch nicht entdeckt wurde
         if (!dfaStateSets.has(nextStateKey) && !unprocessedKeys.has(nextStateKey)) {
-          dfaStateSets.set(nextStateKey, nextNfaStateClosureSet);
-          unprocessedSets.push(nextNfaStateClosureSet); // Füge *neue* Zustände hinten an die Schlange an
-          unprocessedKeys.add(nextStateKey);
+          dfaStateSets.set(nextStateKey, nextNfaStateClosureSet); // Neue Menge merken
+          unprocessedSets.push(nextNfaStateClosureSet);         // Zur Verarbeitung hinzufügen
+          unprocessedKeys.add(nextStateKey);                     // Key merken
         }
       }
 
-      // WICHTIG: Füge die *gerade verarbeitete* Zeile zum Ergebnis hinzu.
-      // Die Reihenfolge in solutionData entspricht der Verarbeitungsreihenfolge.
+      // 9. Die vollständig berechnete Zeile zum Ergebnis hinzufügen
       solutionData.push(currentRow);
     }
+
+    // 10. Optional: Prüfen, ob der leere Zustand (∅) referenziert, aber nicht erstellt wurde
+    // (passiert, wenn ein Übergang in die leere Menge führt, diese aber nie als eigene Zeile vorkam)
+    const emptyStateIsReferenced = solutionData.some(row =>
+        Object.values(row.transitions).flat().some(s => s.id === this.emptyState.id)
+    );
+    const emptyStateRowExists = dfaStateSets.has('∅'); // Prüfen, ob der Key '∅' existiert
+
+    if (emptyStateIsReferenced && !emptyStateRowExists) {
+      console.warn("DFA Solution Table: Leerer Zustand (∅) wird referenziert, aber hat keine eigene Zeile. Füge sie hinzu.");
+      const emptyRow: SolutionTableRow = {
+        id: rowIdCounter++,
+        states: [this.emptyState],
+        markers: [], // Leerer Zustand ist nie Start/Ende (per Definition hier)
+        transitions: {}
+      };
+      for (const symbol of alphabet) {
+        emptyRow.transitions[symbol] = [this.emptyState]; // ∅ führt immer zu ∅
+      }
+      solutionData.push(emptyRow);
+    }
+
+    // 11. Ergebnis zurückgeben
     return solutionData;
   }
 
-  // --- Hilfsfunktionen ---
-  private getStateSetKey(stateSet: Set<EndlicherState>): string {
-    if (!stateSet || stateSet.size === 0) return '∅';
-    return Array.from(stateSet)
-        .map(s => s.id ?? 'undef')
-        .sort((a, b) => (a - b))
+
+  // --- Methoden für die Anzeige DIESER Komponente ---
+
+  /**
+   * Löst die Generierung der Tabelle aus und aktualisiert den Zustand
+   * für die Anzeige in *dieser* Komponente (dfa-solution-table).
+   * Wird durch ngOnChanges oder den "Neu generieren"-Button aufgerufen.
+   */
+  public regenerateTable(): void {
+    this.isLoading = true;
+    this.solutionTableData = null; // Alte Daten löschen
+    this.errorMsg = null;          // Alte Fehler löschen
+
+    // Kurze Verzögerung, damit der Ladeindikator sichtbar wird
+    setTimeout(() => {
+      try {
+        // Stelle sicher, dass die Map aktuell ist, bevor generiert wird
+        this.buildNfaStateMap();
+        // Rufe die synchrone interne Generierungslogik auf
+        const generatedData = this.generateSolutionTableDataInternal();
+
+        if (!generatedData || generatedData.length === 0) {
+          // Kann passieren, wenn z.B. nur der ∅-Zustand erzeugt wird, was gültig ist.
+          // Aber wenn generateSolutionTableDataInternal einen Fehler werfen würde, kämen wir hier nicht an.
+          // Daher prüfen wir auf leeres Array oder null (sollte nicht null sein wegen Fehlerwurf).
+          console.warn("DFA Solution Table Display: Generierte Lösungsdaten sind leer.");
+          this.solutionTableData = generatedData; // Setze ggf. leeres Array oder nur ∅-Zeile
+          // Keine Fehlermeldung, da ein leerer Automat oder nur ∅ gültig sein kann.
+          // Man könnte eine spezifischere Meldung anzeigen:
+          // this.errorMsg = "Der resultierende DFA enthält keine Zustände außer ggf. dem Fehlerzustand (∅).";
+        } else {
+          this.solutionTableData = generatedData;
+        }
+
+      } catch (error: any) {
+        // Fange Fehler aus generateSolutionTableDataInternal ab
+        console.error("Fehler bei Generierung der DFA-Lösungstabelle (Anzeige):", error);
+        this.errorMsg = `Fehler beim Generieren der Tabelle: ${error.message || 'Unbekannter Fehler'}`;
+        this.solutionTableData = null; // Keine Daten bei Fehler
+      } finally {
+        this.isLoading = false; // Ladezustand beenden
+      }
+    }, 10); // Kurze Verzögerung (10ms)
+  }
+
+  // Alias für den Button-Click im Template, falls wir `regenerateTable` public lassen wollen
+  public triggerTableGenerationForDisplay(): void {
+    this.regenerateTable();
+  }
+
+
+  // --- Private Hilfsfunktionen ---
+
+  /**
+   * Erzeugt einen eindeutigen String-Schlüssel für eine Menge von Zuständen.
+   * Wichtig für die Verwaltung entdeckter Zustandsmengen.
+   * Sortiert die IDs numerisch. Behandelt den leeren Zustand ('∅').
+   * @param stateSet Die Menge der Zustände (als Set oder Array).
+   * @returns Den String-Schlüssel (z.B. "1,3,5" oder "∅").
+   */
+  private getStateSetKey(stateSet: Set<EndlicherState> | EndlicherState[]): string {
+    const states = Array.isArray(stateSet) ? stateSet : Array.from(stateSet);
+
+    // Fall 1: Leere Menge oder enthält nur den leeren Zustand
+    if (!states || states.length === 0 || (states.length === 1 && states[0]?.id === this.emptyState.id)) {
+      return '∅';
+    }
+
+    // Fall 2: Enthält Zustände
+    const validStates = states.filter(s => s && typeof s.id !== 'undefined' && s.id !== this.emptyState.id);
+
+    // Wenn nach dem Filtern keine gültigen Zustände übrig sind (z.B. nur null/undefined drin waren)
+    if (validStates.length === 0) {
+      return '∅';
+    }
+
+    // Sortiere die IDs numerisch und verbinde sie mit Komma
+    return validStates
+        .map(s => s.id)
+        .sort((a, b) => (a as number) - (b as number)) // Numerische Sortierung
         .join(',');
   }
 
+  /**
+   * Konvertiert eine Menge von Zuständen in ein sortiertes Array von Zuständen.
+   * Gibt ein Array mit nur dem leeren Zustand zurück, wenn die Menge leer ist.
+   * @param stateSet Die Menge der Zustände.
+   * @returns Ein sortiertes Array von EndlicherState-Objekten.
+   */
   private getStatesFromSet(stateSet: Set<EndlicherState>): EndlicherState[] {
-    if (!stateSet || stateSet.size === 0) return [this.emptyState];
+    if (!stateSet || stateSet.size === 0) {
+      return [this.emptyState]; // Wichtig: Gib Array mit dem leeren Zustand zurück
+    }
+    // Konvertiere das Set zu einem Array und sortiere es nach ID
     return Array.from(stateSet)
         .sort((a, b) => {
-          const idA = a.id ?? -Infinity;
+          const idA = a.id ?? -Infinity; // Behandle fehlende IDs
           const idB = b.id ?? -Infinity;
-          return idA - idB;
+          return (idA as number) - (b.id as number); // Numerische Sortierung
         });
   }
 
+
   // --- Getter für das Template ---
+
+  /**
+   * Gibt das Alphabet des Automaten zurück (alle eindeutigen Übergangssymbole außer Epsilon).
+   * Sortiert für konsistente Spaltenreihenfolge.
+   */
   get symbols(): string[] {
     const automat = this.automat;
     if (!automat) return [];
+
     const uniqueSymbols: Set<string> = new Set();
-    for (const state of automat.getAllStates() as EndlicherState[]) {
-      if (state.transitions) {
-        for (const transition of state.transitions) {
-          if (transition.transitionSymbols) {
-            transition.transitionSymbols.forEach(symbol => {
-              if (symbol !== EndlicherAutomat.epsilon) {
-                uniqueSymbols.add(symbol);
-              }
-            });
-          }
+    const allStates = automat.getAllStates() as EndlicherState[];
+
+    if (allStates) {
+      allStates.forEach(state => {
+        // Prüfe, ob state.transitions existiert und ein Array ist
+        if (state.transitions && Array.isArray(state.transitions)) {
+          state.transitions.forEach(trans => {
+            // Sicherstellen, dass trans eine EndlicheTransition ist und transitionSymbols hat
+            const transition = trans as EndlicheTransition;
+            if (transition.transitionSymbols && Array.isArray(transition.transitionSymbols)) {
+              transition.transitionSymbols.forEach(sym => {
+                if (sym !== EndlicherAutomat.epsilon && typeof sym === 'string') { // Nur Strings hinzufügen
+                  uniqueSymbols.add(sym);
+                }
+              });
+            }
+          });
         }
-      }
+      });
     }
-    return Array.from(uniqueSymbols).sort(); // Alphabet sortieren ist ok für Spaltenreihenfolge
+    return Array.from(uniqueSymbols).sort(); // Alphabet sortieren
   }
 
-  // --- UI Farb-Hilfsfunktionen ---
-  getStateColor(stateId: number | string): string {
-    if (stateId === this.emptyState.id) return '#aaaaaa';
+
+  // --- UI Farb-Hilfsfunktionen (public, da sie von InputTable genutzt werden könnten) ---
+
+  /**
+   * Gibt die Farbe für einen bestimmten NFA-Zustand zurück.
+   * Nutzt die nfaStateMap.
+   * @param stateId Die ID des NFA-Zustands.
+   * @returns Ein Hex-Farbstring.
+   */
+  public getStateColor(stateId: number | string): string {
+    if (stateId === this.emptyState.id) {
+      return '#aaaaaa'; // Einheitliches Grau für den leeren Zustand
+    }
     const state = this.nfaStateMap.get(stateId);
-    if (!state) return '#000000';
+    if (!state) {
+      console.warn(`Farbe für unbekannte State ID ${stateId} angefragt.`);
+      return '#000000'; // Fallback schwarz für unbekannte Zustände
+    }
+
+    // Sortierte Liste der "echten" NFA-Zustände (ohne ∅) aus der Map holen
     const realNfaStates = Array.from(this.nfaStateMap.values())
         .filter(s => s.id !== this.emptyState.id)
-        .sort((a, b) => (a.id < b.id ? -1 : 1));
+        // Sortiere nach ID für konsistente Farbzuweisung
+        .sort((a, b) => ((a.id ?? 0) < (b.id ?? 0) ? -1 : 1));
+
     const total = realNfaStates.length;
-    if (total === 0) return '#222222';
+    if (total === 0) {
+      return '#222222'; // Fallback dunkelgrau, wenn nur der ∅-Zustand da ist
+    }
+
     const stateIndex = realNfaStates.findIndex(s => s.id === stateId);
-    if (stateIndex === -1) return '#444444';
+    if (stateIndex === -1) {
+      console.warn(`State mit ID ${stateId} nicht in sortierter Liste gefunden, obwohl in Map?`);
+      return '#444444'; // Fallback grau
+    }
+
+    // Verteile Farben gleichmäßig über den Farbkreis (Hue)
     const hue = Math.floor((360 / total) * stateIndex);
-    return this.hslToHex(hue, 80, 45);
+    // Nutze HSL zu Hex Konvertierung für gute Unterscheidbarkeit
+    return this.hslToHex(hue, 80, 45); // Sättigung 80%, Helligkeit 45%
   }
 
-  getMarkerColor(markerId: string): string {
+  /**
+   * Gibt die Farbe für einen bestimmten Marker zurück.
+   * @param markerId Die ID des Markers (z.B. '(A)', '(E)').
+   * @returns Ein Hex-Farbstring.
+   */
+  public getMarkerColor(markerId: string): string {
     const marker = this.markers.find(m => m.id === markerId);
-    return marker ? marker.color : '#000000';
+    return marker ? marker.color : '#000000'; // Fallback schwarz
   }
 
-  hslToHex(h: number, s: number, l: number): string {
-    s /= 100; l /= 100;
+  /**
+   * Konvertiert HSL-Farbwerte in einen Hex-String.
+   * @param h Hue (0-360)
+   * @param s Saturation (0-100)
+   * @param l Lightness (0-100)
+   * @returns Hex-Farbstring (z.B. '#ff0000')
+   */
+  public hslToHex(h: number, s: number, l: number): string {
+    s /= 100;
+    l /= 100;
     const c = (1 - Math.abs(2 * l - 1)) * s;
     const x = c * (1 - Math.abs((h / 60) % 2 - 1));
     const m = l - c / 2;
     let r = 0, g = 0, b = 0;
-    if (h < 60) { r = c; g = x; b = 0; }
-    else if (h < 120) { r = x; g = c; b = 0; }
-    else if (h < 180) { r = 0; g = c; b = x; }
-    else if (h < 240) { r = 0; g = x; b = c; }
-    else if (h < 300) { r = x; g = 0; b = c; }
-    else { r = c; g = 0; b = x; }
+    if (h >= 0 && h < 60) { r = c; g = x; b = 0; }
+    else if (h >= 60 && h < 120) { r = x; g = c; b = 0; }
+    else if (h >= 120 && h < 180) { r = 0; g = c; b = x; }
+    else if (h >= 180 && h < 240) { r = 0; g = x; b = c; }
+    else if (h >= 240 && h < 300) { r = x; g = 0; b = c; }
+    else if (h >= 300 && h < 360) { r = c; g = 0; b = x; }
+    // Konvertiere RGB (0-1) zu RGB (0-255)
     const R = Math.round((r + m) * 255);
     const G = Math.round((g + m) * 255);
     const B = Math.round((b + m) * 255);
+    // Konvertiere zu Hex und füge führende Nullen hinzu
     return '#' + [R, G, B].map(val => val.toString(16).padStart(2, '0')).join('');
   }
 
-  // --- TrackBy Funktionen ---
-  trackRowById(index: number, row: TableRow): number { return row.id; }
-  trackSymbol(index: number, symbol: string): string { return symbol; }
-  trackStateById(index: number, state: EndlicherState): number | string { return state.id ?? index; }
-  trackMarkerId(index: number, markerId: string): string { return markerId; }
+
+  // --- TrackBy Funktionen für *ngFor Performance ---
+  // Werden vom Template dieser Komponente verwendet
+
+  trackRowById(index: number, row: SolutionTableRow): number {
+    return row.id;
+  }
+
+  trackSymbol(index: number, symbol: string): string {
+    return symbol;
+  }
+
+  trackStateById(index: number, state: EndlicherState): number | string {
+    // Verwende die ID des Zustands oder den Index als Fallback
+    return state.id ?? `state-${index}`;
+  }
+
+  trackMarkerId(index: number, markerId: string): string {
+    return markerId;
+  }
 }

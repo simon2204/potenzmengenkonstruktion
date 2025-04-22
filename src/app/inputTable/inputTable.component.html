@@ -1,8 +1,8 @@
 <div class="container">
     <h2 class="header">Potenzmengenkonstruktion</h2>
 
-    <!-- Palette mit verfügbaren Zuständen -->
-    <div>
+    <!-- Palette nur im Editier-Modus anzeigen/aktivieren -->
+    <div *ngIf="!isCheckMode">
         <p class="state-label">Verfügbare Zustände:</p>
         <div class="states-container">
             <div *ngFor="let state of availableStates"
@@ -10,70 +10,85 @@
                  [style.background-color]="getStateColor(state.id) + '20'"
                  [style.color]="getStateColor(state.id)"
                  [style.border-color]="getStateColor(state.id)"
-                 (click)="activeCell && addStateToCell(state)">
+                 (click)="!isCheckMode && activeCell && addStateToCell(state)"> <!-- Klick nur wenn nicht CheckMode -->
                 {{ state.name }}
             </div>
         </div>
-    </div>
 
-    <!-- Markierungen -->
-    <div>
         <p class="state-label">Markierungen:</p>
         <div class="states-container">
             <div *ngFor="let marker of markers"
                  class="state-item"
                  [style.background-color]="marker.color + '20'"
                  [style.color]="marker.color"
-                 (click)="activeCell && activeCellType === 'state' && toggleMarker(activeCell, marker.id)">
+                 (click)="!isCheckMode && activeCell && activeCellType === 'state' && toggleMarker(activeCell, marker.id)"> <!-- Klick nur wenn nicht CheckMode -->
                 {{ marker.label }}
             </div>
         </div>
     </div>
+    <!-- Info-Text für Check-Modus -->
+    <div *ngIf="isCheckMode" class="check-mode-info">
+        <p><b>Prüfungsmodus:</b> Die Tabelle zeigt korrekte (grün), falsche (rot, durchgestrichen) und fehlende (grün, kursiv) Elemente. Bearbeitung ist deaktiviert. Klicken Sie auf 'Zurücksetzen', um neu zu beginnen.</p>
+    </div>
 
-    <!-- Die interaktive Tabelle -->
+
+    <!-- Die Tabelle -->
     <table class="table">
         <colgroup>
             <col style="width: auto;">
-            <col *ngFor="let symbol of symbols" style="width: 1fr;">
+            <col *ngFor="let symbol of symbols; trackBy: trackSymbol" style="width: 1fr;">
         </colgroup>
         <thead>
         <tr>
             <th class="table-header-first">SDFA</th>
-            <th *ngFor="let symbol of symbols" class="table-header-symbol">{{ symbol }}</th>
+            <th *ngFor="let symbol of symbols; trackBy: trackSymbol" class="table-header-symbol">{{ symbol }}</th>
         </tr>
         </thead>
         <tbody>
-        <tr *ngFor="let row of tableData">
-            <!-- Erste Spalte (SDFA) mit den möglichen Zuständen -->
-            <td [class]="activeCell === row.id && activeCellType === 'state' ? 'table-cell-active' : 'table-cell-first'"
-                [tabindex]="0"
-                (click)="selectCell(row.id, 'state')"
-                (keydown)="handleKeyDown($event, row.id, 'state')">
+        <!-- Iteriere über die angepasste tableData -->
+        <tr *ngFor="let row of tableData; trackBy: trackRowById"
+            [class.row-missing]="row.rowStatus === 'missing'"
+            [class.row-incorrect]="row.rowStatus === 'incorrect'"> <!-- Style für ganze Zeilen -->
+
+            <!-- Erste Spalte (SDFA) mit Zuständen und Markern -->
+            <!-- Klassen und Klick-Handler an Check-Modus anpassen -->
+            <td [class]="!isCheckMode && activeCell === row.id && activeCellType === 'state' ? 'table-cell-active' : 'table-cell-first'"
+                [attr.tabindex]="isCheckMode ? -1 : 0"
+                (click)="!isCheckMode && selectCell(row.id, 'state')"
+                (keydown)="!isCheckMode && handleKeyDown($event, row.id, 'state')">
                 <div class="cell-blocks-container">
-                    <app-state-block *ngFor="let state of row.states"
-                                     [state]="state.name"
-                                     [color]="getStateColor(state.id)"
-                                     (remove)="removeStateFromCell(row.id, state)">
+                    <!-- Verwende displayStates und übergebe Status -->
+                    <app-state-block *ngFor="let ds of row.displayStates; trackBy: trackDisplayState"
+                                     [state]="ds.state.name"
+                                     [color]="getStateColor(ds.state.id)"
+                                     [status]="ds.status"
+                                     [removable]="!isCheckMode"
+                                     (remove)="removeStateFromCell(row.id, ds)">
                     </app-state-block>
-                    <app-state-block *ngFor="let markerId of row.markers"
-                                     [state]="markerId"
-                                     [color]="getMarkerColor(markerId)"
-                                     (remove)="toggleMarker(row.id, markerId)">
+                    <!-- Verwende displayMarkers und übergebe Status -->
+                    <app-state-block *ngFor="let dm of row.displayMarkers; trackBy: trackDisplayMarker"
+                                     [state]="dm.label"
+                                     [color]="dm.color"
+                                     [status]="dm.status"
+                                     [removable]="false"> <!-- Marker sind nicht direkt entfernbar, nur über toggleMarker -->
                     </app-state-block>
                 </div>
             </td>
 
             <!-- Weitere Spalten für die Symbole -->
-            <td *ngFor="let symbol of symbols"
-                [class]="activeCell === row.id && activeCellType === symbol ? 'table-cell-active' : 'table-cell'"
-                [tabindex]="0"
-                (click)="selectCell(row.id, symbol)"
-                (keydown)="handleKeyDown($event, row.id, symbol)">
+            <td *ngFor="let symbol of symbols; trackBy: trackSymbol"
+                [class]="!isCheckMode && activeCell === row.id && activeCellType === symbol ? 'table-cell-active' : 'table-cell'"
+                [attr.tabindex]="isCheckMode ? -1 : 0"
+                (click)="!isCheckMode && selectCell(row.id, symbol)"
+                (keydown)="!isCheckMode && handleKeyDown($event, row.id, symbol)">
                 <div class="cell-blocks-container">
-                    <app-state-block *ngFor="let state of row.transitions[symbol] || []"
-                                     [state]="state.name"
-                                     [color]="getStateColor(state.id)"
-                                     (remove)="removeTransitionState(row.id, symbol, state)">
+                    <!-- Verwende displayTransitions und übergebe Status -->
+                    <app-state-block *ngFor="let ds of row.displayTransitions[symbol] || []; trackBy: trackDisplayState"
+                                     [state]="ds.state.name"
+                                     [color]="getStateColor(ds.state.id)"
+                                     [status]="ds.status"
+                                     [removable]="!isCheckMode"
+                                     (remove)="removeTransitionState(row.id, symbol, ds)">
                     </app-state-block>
                 </div>
             </td>
@@ -81,8 +96,8 @@
         </tbody>
     </table>
 
-    <!-- Status der aktiven Zelle -->
-    <div class="active-cell-info">
+    <!-- Status der aktiven Zelle (nur im Editier-Modus) -->
+    <div *ngIf="!isCheckMode" class="active-cell-info">
         <p *ngIf="activeCell; else noActiveCell">
             Aktive Zelle: Zeile {{activeCell}}, Spalte: {{activeCellType === 'state' ? 'SDFA' : activeCellType}}
         </p>
@@ -93,13 +108,16 @@
 
     <!-- Steuerungselemente -->
     <div class="controls">
-        <button class="button primary-button" (click)="checkTable()">
+        <!-- Prüfen-Button nur im Editier-Modus -->
+        <button *ngIf="!isCheckMode" class="button primary-button" (click)="checkTable()">
             Prüfen
         </button>
+        <!-- Zurücksetzen-Button immer anzeigen, Text ggf. anpassen -->
         <button class="button danger-button" (click)="resetTable()">
-            Zurücksetzen
+            {{ isCheckMode ? 'Neue Eingabe / Zurücksetzen' : 'Zurücksetzen' }}
         </button>
     </div>
 </div>
 
+<!-- Die Lösungstabelle bleibt bestehen -->
 <app-dfa-solution-table [automat]="stateMachine"></app-dfa-solution-table>
