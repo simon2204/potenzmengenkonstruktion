@@ -28,7 +28,7 @@
     </div>
     <!-- Info-Text für Check-Modus -->
     <div *ngIf="isCheckMode" class="check-mode-info">
-        <p><b>Prüfungsmodus:</b> Die Tabelle zeigt korrekte (grün), falsche (rot, durchgestrichen) und fehlende (grün, kursiv) Elemente. Bearbeitung ist deaktiviert. Klicken Sie auf 'Zurücksetzen', um neu zu beginnen.</p>
+        <p><b>Prüfungsmodus:</b> Die Tabelle zeigt korrekte (grün), falsche (rot, durchgestrichen) und fehlende (grün, kursiv) Elemente. Bearbeitung ist deaktiviert. Klicken Sie auf 'Prüfen beenden', um fortzufahren.</p>
     </div>
 
 
@@ -114,7 +114,7 @@
         </button>
         <!-- Zurücksetzen-Button immer anzeigen, Text ggf. anpassen -->
         <button class="button danger-button" (click)="resetTable()">
-            {{ isCheckMode ? 'Neue Eingabe / Zurücksetzen' : 'Zurücksetzen' }}
+            {{ isCheckMode ? 'Prüfen beenden' : 'Zurücksetzen' }}
         </button>
     </div>
 </div>
