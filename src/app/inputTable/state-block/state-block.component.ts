@@ -1,7 +1,6 @@
-import { Component, Input, Output, EventEmitter, HostBinding } from '@angular/core'; // Import HostBinding
-import { CommonModule } from '@angular/common';
-
-export type StateStatus = 'original' | 'correct' | 'incorrect' | 'missing'; // Define possible statuses
+import {Component, EventEmitter, HostBinding, Input, Output} from '@angular/core'; // Import HostBinding
+import {CommonModule} from '@angular/common';
+import {StateStatus} from "../stateStatus";
 
 @Component({
   selector: 'app-state-block',
@@ -14,36 +13,34 @@ export class StateBlockComponent {
   @Input() state: string = '';
   @Input() color: string = '#000000';
   @Input() removable: boolean = true;
-  @Input() status: StateStatus = 'original'; // <-- Neuer Input
+  @Input() status: StateStatus = StateStatus.original; // <-- Neuer Input
   @Output() remove = new EventEmitter<void>();
 
   // Use HostBinding for easier class application based on status
-  @HostBinding('class.correct') get isCorrect() { return this.status === 'correct'; }
-  @HostBinding('class.incorrect') get isIncorrect() { return this.status === 'incorrect'; }
-  @HostBinding('class.missing') get isMissing() { return this.status === 'missing'; }
-  @HostBinding('class.original') get isOriginal() { return this.status === 'original'; }
+  @HostBinding('class.correct') get isCorrect() { return this.status === StateStatus.correct; }
+  @HostBinding('class.incorrect') get isIncorrect() { return this.status ===  StateStatus.incorrect; }
+  @HostBinding('class.missing') get isMissing() { return this.status ===  StateStatus.missing; }
+  @HostBinding('class.original') get isOriginal() { return this.status ===  StateStatus.original; }
   @HostBinding('style.opacity') get opacity() {
-    // Optional: Slightly fade original blocks in check mode if needed
-    // return this.status === 'original' && !this.removable ? '0.7' : '1';
     return '1';
   }
 
   getBackgroundColor(): string {
     // Adjust background based on status if needed, otherwise rely on CSS classes
-    switch(this.status) {
-      case 'correct': return '#22c55e20'; // Light Green
-      case 'incorrect': return '#ef444420'; // Light Red
-      case 'missing': return '#a7f3d0'; // Lighter Green / Teal variant
+    switch (this.status) {
+      case StateStatus.correct: return '#22c55e20'; // Light Green
+      case StateStatus.incorrect: return '#ef444420'; // Light Red
+      case StateStatus.missing: return '#a7f3d0'; // Lighter Green / Teal variant
       default: return `${this.color}20`; // Original light color
     }
   }
 
   getTextColor(): string {
     // Adjust text color based on status if needed, otherwise rely on CSS classes
-    switch(this.status) {
-      case 'correct': return '#15803d'; // Dark Green
-      case 'incorrect': return '#b91c1c'; // Dark Red
-      case 'missing': return '#065f46'; // Darker Green / Teal
+    switch (this.status) {
+      case StateStatus.correct: return '#15803d'; // Dark Green
+      case StateStatus.incorrect: return '#b91c1c'; // Dark Red
+      case StateStatus.missing: return '#065f46'; // Darker Green / Teal
       default: return this.color; // Original color
     }
   }

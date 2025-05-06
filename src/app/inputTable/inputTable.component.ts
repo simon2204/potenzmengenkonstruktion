@@ -1,13 +1,18 @@
-import { Component, ViewChild, ChangeDetectorRef, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { StateBlockComponent, StateStatus } from "./state-block/state-block.component";
-import { EndlicherState } from "../endlicherautomat/EndlicherState";
-import { StatemachineService } from "../../../statemachine/src/lib/statemachine/statemachine.service";
-import { EndlicheTransition } from "../endlicherautomat/EndlicheTransition";
-import { Point } from "../../../statemachine/src/lib/statemachine/drawingprimitives/Point";
-import { DfaSolutionTableComponent, MarkerItem, SolutionTableRow } from "../dfa-solution-table/dfa-solution-table.component";
-import { EndlicherAutomat } from "../endlicherautomat/EndlicherAutomat";
-import { Subscription } from 'rxjs';
+import {ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {StateBlockComponent} from "./state-block/state-block.component";
+import {EndlicherState} from "../endlicherautomat/EndlicherState";
+import {StatemachineService} from "../../../statemachine/src/lib/statemachine/statemachine.service";
+import {EndlicheTransition} from "../endlicherautomat/EndlicheTransition";
+import {Point} from "../../../statemachine/src/lib/statemachine/drawingprimitives/Point";
+import {
+  DfaSolutionTableComponent,
+  MarkerItem,
+  SolutionTableRow
+} from "../dfa-solution-table/dfa-solution-table.component";
+import {EndlicherAutomat} from "../endlicherautomat/EndlicherAutomat";
+import {Subscription} from 'rxjs';
+import {StateStatus} from "./stateStatus";
 
 // ----------- Interfaces -----------
 // Struktur für Zustände in der Anzeige (mit Status)
@@ -287,7 +292,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
         resultRow.displayMarkers = markers;
 
         // Wenn Zustände oder Marker nicht 100% korrekt sind, setze Status auf 'partial'
-        if (states.some(s => s.status !== 'correct') || markers.some(m => m.status !== 'correct')) {
+        if (states.some(s => s.status !== StateStatus.correct) || markers.some(m => m.status !== StateStatus.correct)) {
           resultRow.rowStatus = 'partial';
         }
 
@@ -298,7 +303,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
         );
 
         // Wenn irgendein Zustand in irgendeinem Übergang nicht korrekt ist, setze Status auf 'partial'
-        if (Object.values(resultRow.displayTransitions).flat().some(s => s.status !== 'correct')) {
+        if (Object.values(resultRow.displayTransitions).flat().some(s => s.status !== StateStatus.correct)) {
           resultRow.rowStatus = 'partial';
         }
 
@@ -312,17 +317,17 @@ export class InputTableComponent implements OnInit, OnDestroy {
           id: this.getNextRowId(comparisonResult), // Generiere eine neue, eindeutige ID
           rowStatus: 'missing',                    // Diese Zeile fehlt in der Eingabe
           // Fülle die Zeile mit den Lösungsdaten, markiere alles als 'missing'
-          displayStates: solutionRow.states.map(state => ({ state, status: 'missing' })),
+          displayStates: solutionRow.states.map(state => ({ state, status: StateStatus.missing })),
           displayMarkers: this.markers
               .filter(m => solutionRow.markers.includes(m.id)) // Finde passende Marker-Definitionen
-              .map(m => ({ id: m.id, label: m.label, color: m.color, status: 'missing' })),
+              .map(m => ({ id: m.id, label: m.label, color: m.color, status: StateStatus.missing })),
           displayTransitions: {},
           solutionStateKey: solutionKey
         };
         // Fülle die Übergänge der fehlenden Zeile
         this.symbols.forEach(symbol => {
           resultRow.displayTransitions[symbol] = (solutionRow.transitions[symbol] || [])
-              .map(state => ({ state, status: 'missing' }));
+              .map(state => ({ state, status: StateStatus.missing }));
         });
       }
       // Füge die erstellte Ergebniszeile (entweder verglichen oder fehlend) zum Ergebnis hinzu
@@ -340,15 +345,15 @@ export class InputTableComponent implements OnInit, OnDestroy {
           id: originalInputRow.id, // Behalte die Original-ID bei
           rowStatus: 'incorrect',  // Diese Zeile ist komplett falsch
           // Markiere alle Elemente dieser Zeile als 'incorrect'
-          displayStates: originalInputRow.displayStates.map(ds => ({ ...ds, status: 'incorrect' })),
-          displayMarkers: originalInputRow.displayMarkers.map(dm => ({ ...dm, status: 'incorrect' })),
+          displayStates: originalInputRow.displayStates.map(ds => ({ ...ds, status: StateStatus.incorrect })),
+          displayMarkers: originalInputRow.displayMarkers.map(dm => ({ ...dm, status: StateStatus.incorrect })),
           displayTransitions: {},
           solutionStateKey: incorrectKey // Der Key der (falschen) Eingabe
         };
         // Fülle die (falschen) Übergänge
         this.symbols.forEach(symbol => {
           incorrectRow.displayTransitions[symbol] = (originalInputRow.displayTransitions[symbol] || [])
-              .map(ds => ({ state: ds.state, status: 'incorrect' }));
+              .map(ds => ({ state: ds.state, status: StateStatus.incorrect }));
         });
         // Füge diese falsche Zeile *am Ende* des Ergebnis-Arrays hinzu
         comparisonResult.push(incorrectRow);
@@ -381,10 +386,10 @@ export class InputTableComponent implements OnInit, OnDestroy {
     solutionStates.forEach(solutionState => {
       if (inputStateIdSet.has(solutionState.id)) {
         // Korrekt: Zustand ist in Lösung UND Eingabe
-        resultStates.push({ state: solutionState, status: 'correct' });
+        resultStates.push({ state: solutionState, status: StateStatus.correct });
       } else {
         // Fehlend: Zustand ist in Lösung, ABER NICHT in Eingabe
-        resultStates.push({ state: solutionState, status: 'missing' });
+        resultStates.push({ state: solutionState, status: StateStatus.missing });
       }
     });
 
@@ -392,7 +397,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
     inputStates.forEach(inputState => {
       if (!solutionStateMap.has(inputState.id)) {
         // Falsch: Zustand ist in Eingabe, ABER NICHT in Lösung
-        resultStates.push({ state: inputState, status: 'incorrect' });
+        resultStates.push({ state: inputState, status: StateStatus.incorrect });
       }
       // Korrekte wurden in Schritt 1 behandelt
     });
@@ -408,10 +413,10 @@ export class InputTableComponent implements OnInit, OnDestroy {
       if (!markerDef) return; // Sollte nicht passieren
       if (inputMarkerSet.has(solutionMarkerId)) {
         // Korrekt
-        resultMarkers.push({ ...markerDef, status: 'correct' });
+        resultMarkers.push({ ...markerDef, status: StateStatus.correct });
       } else {
         // Fehlend
-        resultMarkers.push({ ...markerDef, status: 'missing' });
+        resultMarkers.push({ ...markerDef, status: StateStatus.missing });
       }
     });
 
@@ -421,7 +426,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
       if (!markerDef) return;
       if (!solutionMarkerSet.has(inputMarkerId)) {
         // Falsch
-        resultMarkers.push({ ...markerDef, status: 'incorrect' });
+        resultMarkers.push({ ...markerDef, status: StateStatus.incorrect });
       }
       // Korrekte wurden in Schritt 1 behandelt
     });
@@ -522,7 +527,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
       const existingIndex = row.displayStates.findIndex(ds => ds.state.id === state.id);
       // Füge nur hinzu, wenn noch nicht vorhanden
       if (existingIndex === -1) {
-        row.displayStates.push({ state: state, status: 'original' });
+        row.displayStates.push({ state: state, status: StateStatus.original });
         // Sortiere Zustände nach ID für konsistente Anzeige
         row.displayStates.sort((a, b) => (a.state.id ?? -1) - (b.state.id ?? -1));
       }
@@ -536,7 +541,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
       const existingIndex = transitionStates.findIndex(ds => ds.state.id === state.id);
       // Füge nur hinzu, wenn noch nicht vorhanden
       if (existingIndex === -1) {
-        transitionStates.push({ state: state, status: 'original' });
+        transitionStates.push({ state: state, status: StateStatus.original });
         // Sortiere Zustände nach ID
         transitionStates.sort((a, b) => (a.state.id ?? -1) - (b.state.id ?? -1));
 
@@ -600,7 +605,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
       row.displayMarkers.splice(existingIndex, 1);
     } else {
       // Marker hinzufügen
-      row.displayMarkers.push({ ...markerDef, status: 'original' });
+      row.displayMarkers.push({ ...markerDef, status: StateStatus.original });
       // Sortiere Marker (z.B. alphabetisch nach Label)
       row.displayMarkers.sort((a, b) => a.label.localeCompare(b.label));
     }
