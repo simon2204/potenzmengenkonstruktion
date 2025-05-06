@@ -18,9 +18,9 @@ export class StateBlockComponent {
 
   // Use HostBinding for easier class application based on status
   @HostBinding('class.correct') get isCorrect() { return this.status === StateStatus.correct; }
-  @HostBinding('class.incorrect') get isIncorrect() { return this.status ===  StateStatus.incorrect; }
-  @HostBinding('class.missing') get isMissing() { return this.status ===  StateStatus.missing; }
-  @HostBinding('class.original') get isOriginal() { return this.status ===  StateStatus.original; }
+  @HostBinding('class.incorrect') get isIncorrect() { return this.status === StateStatus.incorrect; }
+  @HostBinding('class.missing') get isMissing() { return this.status === StateStatus.missing; }
+  @HostBinding('class.original') get isOriginal() { return this.status === StateStatus.original; }
   @HostBinding('style.opacity') get opacity() {
     return '1';
   }

@@ -5,25 +5,23 @@
     <div *ngIf="!isCheckMode">
         <p class="state-label">Verfügbare Zustände:</p>
         <div class="states-container">
-            <div *ngFor="let state of availableStates"
-                 class="state-item"
-                 [style.background-color]="getStateColor(state.id) + '20'"
-                 [style.color]="getStateColor(state.id)"
-                 [style.border-color]="getStateColor(state.id)"
-                 (click)="!isCheckMode && activeCell && addStateToCell(state)"> <!-- Klick nur wenn nicht CheckMode -->
-                {{ state.name }}
-            </div>
+            <app-state-block *ngFor="let state of availableStates"
+                             style="cursor: pointer;"
+                             [state]="state.name"
+                             [removable]="false"
+                             (click)="!isCheckMode && activeCell && addStateToCell(state)">
+            </app-state-block>
         </div>
 
         <p class="state-label">Markierungen:</p>
         <div class="states-container">
-            <div *ngFor="let marker of markers"
-                 class="state-item"
-                 [style.background-color]="marker.color + '20'"
-                 [style.color]="marker.color"
-                 (click)="!isCheckMode && activeCell && activeCellType === 'state' && toggleMarker(activeCell, marker.id)"> <!-- Klick nur wenn nicht CheckMode -->
-                {{ marker.label }}
-            </div>
+            <app-state-block
+                    style="cursor: pointer;"
+                    *ngFor="let marker of markers"
+                             [state]="marker.label"
+                             [removable]="false"
+                             (click)="!isCheckMode && activeCell && activeCellType === 'state' && toggleMarker(activeCell, marker.id)">
+            </app-state-block>
         </div>
     </div>
     <!-- Info-Text für Check-Modus -->
@@ -60,7 +58,6 @@
                     <!-- Verwende displayStates und übergebe Status -->
                     <app-state-block *ngFor="let ds of row.displayStates; trackBy: trackDisplayState"
                                      [state]="ds.state.name"
-                                     [color]="getStateColor(ds.state.id)"
                                      [status]="ds.status"
                                      [removable]="!isCheckMode"
                                      (remove)="removeStateFromCell(row.id, ds)">
@@ -68,9 +65,9 @@
                     <!-- Verwende displayMarkers und übergebe Status -->
                     <app-state-block *ngFor="let dm of row.displayMarkers; trackBy: trackDisplayMarker"
                                      [state]="dm.label"
-                                     [color]="dm.color"
                                      [status]="dm.status"
-                                     [removable]="false"> <!-- Marker sind nicht direkt entfernbar, nur über toggleMarker -->
+                                     [removable]="!isCheckMode"
+                                     (remove)="removeMarkerFromCell(row.id, dm)">
                     </app-state-block>
                 </div>
             </td>
@@ -85,7 +82,6 @@
                     <!-- Verwende displayTransitions und übergebe Status -->
                     <app-state-block *ngFor="let ds of row.displayTransitions[symbol] || []; trackBy: trackDisplayState"
                                      [state]="ds.state.name"
-                                     [color]="getStateColor(ds.state.id)"
                                      [status]="ds.status"
                                      [removable]="!isCheckMode"
                                      (remove)="removeTransitionState(row.id, symbol, ds)">
@@ -118,6 +114,11 @@
         </button>
     </div>
 </div>
+
+<p>Welche Zustände möchtest du anzeigen?</p>
+<label><input type="checkbox" name="states" value="korrekte"> ✅ Korrekte Zustände anzeigen</label><br>
+<label><input type="checkbox" name="states" value="falsche"> ❌ Falsche Zustände anzeigen</label><br>
+<label><input type="checkbox" name="states" value="fehlende"> ⚠️ Fehlende Zustände anzeigen</label>
 
 <!-- Die Lösungstabelle bleibt bestehen -->
 <app-dfa-solution-table [automat]="stateMachine"></app-dfa-solution-table>

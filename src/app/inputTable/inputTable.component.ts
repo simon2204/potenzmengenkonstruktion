@@ -130,7 +130,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
       if (this.service.transitions) {
         for (const transition of this.service.transitions) {
           for (const symbol of (transition as EndlicheTransition).transitionSymbols) {
-            if (symbol !== EndlicherAutomat.epsilon && typeof symbol === 'string') {
+            if (symbol !== EndlicherAutomat.epsilon) {
               uniqueSymbols.add(symbol);
             }
           }
@@ -141,7 +141,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
     if (this.service.transitions) {
       for (const transition of this.service.transitions) {
         for (const symbol of (transition as EndlicheTransition).transitionSymbols) {
-          if (symbol !== EndlicherAutomat.epsilon && typeof symbol === 'string') {
+          if (symbol !== EndlicherAutomat.epsilon) {
             uniqueSymbols.add(symbol);
           }
         }
@@ -567,6 +567,16 @@ export class InputTableComponent implements OnInit, OnDestroy {
     );
     // Prüfe danach, ob diese Zeile jetzt leer ist und entfernt werden kann
     this.adjustEmptyRows();
+  }
+
+  removeMarkerFromCell(rowId: number, displayMarkerToRemove: DisplayMarker): void {
+    if (this.isCheckMode) return;
+    const rowIndex = this.tableData.findIndex(row => row.id === rowId);
+    if (rowIndex === -1) return;
+
+    this.tableData[rowIndex].displayMarkers = this.tableData[rowIndex].displayMarkers.filter(
+        ds => ds.id !== displayMarkerToRemove.id
+    );
   }
 
   /** Entfernt einen Zustand aus einer Übergangszelle. */
