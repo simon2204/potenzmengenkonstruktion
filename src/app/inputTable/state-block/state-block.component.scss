@@ -37,11 +37,6 @@
   font-style: italic;
 }
 
-:host(.original) .state-block {
-  // Default styling (handled by base and getBackgroundColor/getTextColor)
-}
-
-
 .state-remove-btn {
   margin-left: 0.25rem;
   background: none;
