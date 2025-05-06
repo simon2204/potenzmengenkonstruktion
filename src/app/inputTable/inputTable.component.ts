@@ -5,8 +5,11 @@ import {EndlicherState} from "../endlicherautomat/EndlicherState";
 import {StatemachineService} from "../../../statemachine/src/lib/statemachine/statemachine.service";
 import {EndlicheTransition} from "../endlicherautomat/EndlicheTransition";
 import {Point} from "../../../statemachine/src/lib/statemachine/drawingprimitives/Point";
-import { DfaSolutionTableComponent } from "../dfa-solution-table/dfa-solution-table.component"; // Keep for type, or remove if not needed for template
-import { DfaGeneratorService, SolutionTableRow, MarkerItem as ServiceMarkerItem } from '../services/dfa-generator-service.service'; // Import from service
+import {
+  DfaGeneratorService,
+  SolutionTableRow,
+  MarkerItem
+} from '../services/dfa-generator-service.service'; // Import from service
 import {EndlicherAutomat} from "../endlicherautomat/EndlicherAutomat";
 import {Subscription} from 'rxjs';
 import {StateStatus} from "./stateStatus";
@@ -32,12 +35,6 @@ interface TableRow {
   displayTransitions: { [symbol: string]: DisplayState[] };
   solutionStateKey?: string;
 }
-
-// Local MarkerItem for palette, if different from ServiceMarkerItem or for separation
-interface PaletteMarkerItem {
-  id: string;
-  label: string;
-}
 // ----------- Ende Interfaces -----------
 
 @Component({
@@ -45,15 +42,15 @@ interface PaletteMarkerItem {
   templateUrl: './inputTable.component.html',
   styleUrls: ['./inputTable.component.scss'],
   standalone: true,
-  imports: [CommonModule, StateBlockComponent, DfaSolutionTableComponent] // DfaSolutionTableComponent still needed for <app-dfa-solution-table> in template
+  imports: [CommonModule, StateBlockComponent]
 })
 export class InputTableComponent implements OnInit, OnDestroy {
 
-  private emptyState: EndlicherState;
+  private readonly emptyState: EndlicherState;
   private serviceSubscription: Subscription | null = null;
   private originalTableDataBeforeCheck: TableRow[] | null = null;
 
-  markers: PaletteMarkerItem[] = [ // Use PaletteMarkerItem if its structure/purpose diverges
+  markers: MarkerItem[] = [
     { id: '(A)', label: 'A' },
     { id: '(E)', label: 'E' }
   ];
@@ -101,7 +98,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
     if (this.service.transitions) {
       for (const transition of this.service.transitions) {
         for (const symbol of (transition as EndlicheTransition).transitionSymbols) {
-          if (symbol !== EndlicherAutomat.epsilon && typeof symbol === 'string') {
+          if (symbol !== EndlicherAutomat.epsilon) {
             uniqueSymbols.add(symbol);
           }
         }
