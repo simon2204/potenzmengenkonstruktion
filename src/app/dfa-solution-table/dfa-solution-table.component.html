@@ -41,12 +41,10 @@
                 <td class="table-cell-first">
                     <div class="cell-blocks-container">
                         <app-state-block *ngFor="let state of row.states; trackBy: trackStateById"
-                                         [state]="state.name"
-                                         [color]="getStateColor(state.id)">
+                                         [state]="state.name">
                         </app-state-block>
                         <app-state-block *ngFor="let markerId of row.markers; trackBy: trackMarkerId"
-                                         [state]="markerId"
-                                         [color]="getMarkerColor(markerId)">
+                                         [state]="markerId">
                         </app-state-block>
                     </div>
                 </td>
@@ -54,8 +52,7 @@
                 <td *ngFor="let symbol of symbols; trackBy: trackSymbol" class="table-cell">
                     <div class="cell-blocks-container">
                         <app-state-block *ngFor="let state of row.transitions[symbol]; trackBy: trackStateById"
-                                         [state]="state.name"
-                                         [color]="getStateColor(state.id)">
+                                         [state]="state.name">
                         </app-state-block>
                     </div>
                 </td>

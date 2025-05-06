@@ -20,7 +20,6 @@ export interface SolutionTableRow {
 export interface MarkerItem {
   id: string; // z.B. '(A)'
   label: string; // z.B. 'A'
-  color: string;
 }
 
 
@@ -45,8 +44,8 @@ export class DfaSolutionTableComponent implements OnChanges {
   public readonly emptyState: EndlicherState;
   public nfaStateMap = new Map<number | string, EndlicherState>(); // Map von NFA State ID -> NFA State Objekt
   public readonly markers: MarkerItem[] = [ // Konsistent mit InputTable halten
-    { id: '(A)', label: 'A', color: '#f59e0b' }, // Startzustandsmarker
-    { id: '(E)', label: 'E', color: '#ef4444' }  // Endzustandsmarker
+    { id: '(A)', label: 'A' }, // Startzustandsmarker
+    { id: '(E)', label: 'E' }  // Endzustandsmarker
   ];
 
   constructor() {
@@ -386,87 +385,6 @@ export class DfaSolutionTableComponent implements OnChanges {
     }
     return Array.from(uniqueSymbols).sort(); // Alphabet sortieren
   }
-
-
-  // --- UI Farb-Hilfsfunktionen (public, da sie von InputTable genutzt werden könnten) ---
-
-  /**
-   * Gibt die Farbe für einen bestimmten NFA-Zustand zurück.
-   * Nutzt die nfaStateMap.
-   * @param stateId Die ID des NFA-Zustands.
-   * @returns Ein Hex-Farbstring.
-   */
-  public getStateColor(stateId: number | string): string {
-    if (stateId === this.emptyState.id) {
-      return '#aaaaaa'; // Einheitliches Grau für den leeren Zustand
-    }
-    const state = this.nfaStateMap.get(stateId);
-    if (!state) {
-      console.warn(`Farbe für unbekannte State ID ${stateId} angefragt.`);
-      return '#000000'; // Fallback schwarz für unbekannte Zustände
-    }
-
-    // Sortierte Liste der "echten" NFA-Zustände (ohne ∅) aus der Map holen
-    const realNfaStates = Array.from(this.nfaStateMap.values())
-        .filter(s => s.id !== this.emptyState.id)
-        // Sortiere nach ID für konsistente Farbzuweisung
-        .sort((a, b) => ((a.id ?? 0) < (b.id ?? 0) ? -1 : 1));
-
-    const total = realNfaStates.length;
-    if (total === 0) {
-      return '#222222'; // Fallback dunkelgrau, wenn nur der ∅-Zustand da ist
-    }
-
-    const stateIndex = realNfaStates.findIndex(s => s.id === stateId);
-    if (stateIndex === -1) {
-      console.warn(`State mit ID ${stateId} nicht in sortierter Liste gefunden, obwohl in Map?`);
-      return '#444444'; // Fallback grau
-    }
-
-    // Verteile Farben gleichmäßig über den Farbkreis (Hue)
-    const hue = Math.floor((360 / total) * stateIndex);
-    // Nutze HSL zu Hex Konvertierung für gute Unterscheidbarkeit
-    return this.hslToHex(hue, 80, 45); // Sättigung 80%, Helligkeit 45%
-  }
-
-  /**
-   * Gibt die Farbe für einen bestimmten Marker zurück.
-   * @param markerId Die ID des Markers (z.B. '(A)', '(E)').
-   * @returns Ein Hex-Farbstring.
-   */
-  public getMarkerColor(markerId: string): string {
-    const marker = this.markers.find(m => m.id === markerId);
-    return marker ? marker.color : '#000000'; // Fallback schwarz
-  }
-
-  /**
-   * Konvertiert HSL-Farbwerte in einen Hex-String.
-   * @param h Hue (0-360)
-   * @param s Saturation (0-100)
-   * @param l Lightness (0-100)
-   * @returns Hex-Farbstring (z.B. '#ff0000')
-   */
-  public hslToHex(h: number, s: number, l: number): string {
-    s /= 100;
-    l /= 100;
-    const c = (1 - Math.abs(2 * l - 1)) * s;
-    const x = c * (1 - Math.abs((h / 60) % 2 - 1));
-    const m = l - c / 2;
-    let r = 0, g = 0, b = 0;
-    if (h >= 0 && h < 60) { r = c; g = x; b = 0; }
-    else if (h >= 60 && h < 120) { r = x; g = c; b = 0; }
-    else if (h >= 120 && h < 180) { r = 0; g = c; b = x; }
-    else if (h >= 180 && h < 240) { r = 0; g = x; b = c; }
-    else if (h >= 240 && h < 300) { r = x; g = 0; b = c; }
-    else if (h >= 300 && h < 360) { r = c; g = 0; b = x; }
-    // Konvertiere RGB (0-1) zu RGB (0-255)
-    const R = Math.round((r + m) * 255);
-    const G = Math.round((g + m) * 255);
-    const B = Math.round((b + m) * 255);
-    // Konvertiere zu Hex und füge führende Nullen hinzu
-    return '#' + [R, G, B].map(val => val.toString(16).padStart(2, '0')).join('');
-  }
-
 
   // --- TrackBy Funktionen für *ngFor Performance ---
   // Werden vom Template dieser Komponente verwendet

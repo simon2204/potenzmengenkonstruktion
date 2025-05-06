@@ -11,7 +11,6 @@ import {StateStatus} from "../stateStatus";
 })
 export class StateBlockComponent {
   @Input() state: string = '';
-  @Input() color: string = '#000000';
   @Input() removable: boolean = true;
   @Input() status: StateStatus = StateStatus.original; // <-- Neuer Input
   @Output() remove = new EventEmitter<void>();
@@ -25,23 +24,25 @@ export class StateBlockComponent {
     return '1';
   }
 
+
   getBackgroundColor(): string {
     // Adjust background based on status if needed, otherwise rely on CSS classes
     switch (this.status) {
-      case StateStatus.correct: return '#22c55e20'; // Light Green
+      case StateStatus.correct: return '#e5e7eb'; // Light Green
       case StateStatus.incorrect: return '#ef444420'; // Light Red
-      case StateStatus.missing: return '#a7f3d0'; // Lighter Green / Teal variant
-      default: return `${this.color}20`; // Original light color
+      case StateStatus.missing: return '#a7f3d0'; // Lighter Green / Teal variant for missing
+      case StateStatus.original: return '#e5e7eb'; // Standard light gray background for original/edit mode
+      default: return '#f3f4f6'; // Fallback background
     }
   }
 
   getTextColor(): string {
     // Adjust text color based on status if needed, otherwise rely on CSS classes
     switch (this.status) {
-      case StateStatus.correct: return '#15803d'; // Dark Green
+      case StateStatus.correct: return '#1f2937'; // Dark Green
       case StateStatus.incorrect: return '#b91c1c'; // Dark Red
       case StateStatus.missing: return '#065f46'; // Darker Green / Teal
-      default: return this.color; // Original color
+      default: return '#1f2937'; // Original color
     }
   }
 

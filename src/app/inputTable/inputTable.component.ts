@@ -25,7 +25,6 @@ interface DisplayState {
 interface DisplayMarker {
   id: string; // z.B. '(A)'
   label: string; // z.B. 'A'
-  color: string;
   status: StateStatus;
 }
 
@@ -61,8 +60,8 @@ export class InputTableComponent implements OnInit, OnDestroy {
 
   // Definiert verfügbare Marker
   markers: MarkerItem[] = [
-    { id: '(A)', label: 'A', color: '#f59e0b' }, // Startzustand
-    { id: '(E)', label: 'E', color: '#ef4444' }  // Endzustand
+    { id: '(A)', label: 'A' }, // Startzustand
+    { id: '(E)', label: 'E' }  // Endzustand
   ];
 
   // Daten der Eingabetabelle
@@ -87,14 +86,6 @@ export class InputTableComponent implements OnInit, OnDestroy {
    */
   ngOnInit(): void {
     this.initializeEmptyTable();
-    // Lausche auf Änderungen am Automaten (z.B. neue Zustände/Übergänge vom Benutzer)
-    // this.serviceSubscription = this.service.stateMachineUpdated.subscribe(() => {
-    //   if (!this.isCheckMode) {
-    //     console.log("Statemachine updated, recalculating symbols.");
-    //     // Aktualisiere die UI, falls sich verfügbare Zustände oder Symbole geändert haben
-    //     this.cdRef.detectChanges();
-    //   }
-    // });
   }
 
   /**
@@ -320,7 +311,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
           displayStates: solutionRow.states.map(state => ({ state, status: StateStatus.missing })),
           displayMarkers: this.markers
               .filter(m => solutionRow.markers.includes(m.id)) // Finde passende Marker-Definitionen
-              .map(m => ({ id: m.id, label: m.label, color: m.color, status: StateStatus.missing })),
+              .map(m => ({ id: m.id, label: m.label, status: StateStatus.missing })),
           displayTransitions: {},
           solutionStateKey: solutionKey
         };
@@ -711,37 +702,6 @@ export class InputTableComponent implements OnInit, OnDestroy {
     } else {
       this.initializeEmptyTable();
     }
-  }
-
-  /** Gibt die Farbe für einen NFA-Zustand zurück. */
-  getStateColor(stateId: number | string): string {
-    if (stateId === this.emptyState.id) return '#aaaaaa'; // Einheitliches Grau für ∅
-    // Nutze die Farb-Logik der Lösungs-Komponente für Konsistenz
-    if (this.dfaSolutionTable) return this.dfaSolutionTable.getStateColor(stateId);
-    // Fallback, falls Lösungs-Komponente nicht verfügbar
-    const state = this.availableStates.find(s => s.id === stateId);
-    if (!state) return '#000000';
-    const allRealStates = this.availableStates.filter(s => s.id !== this.emptyState.id);
-    const total = allRealStates.length;
-    if (total === 0) return '#222222';
-    const stateIndex = allRealStates.findIndex(s => s.id === stateId);
-    if (stateIndex === -1) return '#444444';
-    const hue = Math.floor((360 / total) * stateIndex);
-    return this.hslToHex(hue, 80, 40); // Sättigung 80%, Helligkeit 40%
-  }
-
-  /** Gibt die Farbe für einen Marker zurück. */
-  getMarkerColor(markerId: string): string {
-    const marker = this.markers.find(m => m.id === markerId);
-    return marker ? marker.color : '#000000'; // Fallback schwarz
-  }
-
-  /** Konvertiert HSL in Hex-Farbe. */
-  hslToHex(h: number, s: number, l: number): string {
-    s /= 100; l /= 100; const c = (1 - Math.abs(2 * l - 1)) * s; const x = c * (1 - Math.abs((h / 60) % 2 - 1)); const m = l - c / 2; let r=0, g=0, b=0;
-    if (h < 60) { r=c; g=x; b=0; } else if (h < 120) { r=x; g=c; b=0; } else if (h < 180) { r=0; g=c; b=x; } else if (h < 240) { r=0; g=x; b=c; } else if (h < 300) { r=x; g=0; b=c; } else { r=c; g=0; b=x; }
-    const R = Math.round((r + m) * 255); const G = Math.round((g + m) * 255); const B = Math.round((b + m) * 255);
-    return '#' + [R, G, B].map(val => val.toString(16).padStart(2, '0')).join('');
   }
 
   /** Behandelt Tastaturnavigation mit Pfeiltasten im Editier-Modus. */
