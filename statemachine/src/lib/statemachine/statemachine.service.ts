@@ -3,6 +3,7 @@ import { StateMachine } from './statemachine';
 import { State } from './state';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { Transition } from './stateconnections/Transition';
+import {TutorialDialogComponent} from "../../../../src/app/tutorial-dialog/tutorial-dialog.component";
 
 @Injectable({
   providedIn: 'root'
@@ -16,6 +17,8 @@ export class StatemachineService {
   testCaseViewIsVisible: boolean = true;
 
   testcaseViewToggled?: () => void;
+
+  constructor(public dialog: MatDialog) {}
 
   get input(): string {
     return this.stateMachine.input;
@@ -99,5 +102,12 @@ export class StatemachineService {
 
   isAccepting(): boolean | undefined {
     return this.stateMachine.isAcceptingWord(this.stateMachine.input).isAccepting;
+  }
+
+  openHelpDialog(): void {
+    this.dialog.open(TutorialDialogComponent, {
+      maxWidth: '70vw',
+      maxHeight: '90vh',
+    });
   }
 }

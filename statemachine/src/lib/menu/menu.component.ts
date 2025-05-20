@@ -22,13 +22,8 @@ export class MenuComponent {
   public vorlesungsbeispiele: any[] = [];
   public uebungsaufgaben: any[] = [];
 
-  constructor(public dialog: MatDialog, public service: StatemachineService) {
-    //this.loadFromBrowserCache()
-    //setInterval(this.saveToBrowserCache, 3000);
-  }
-
-  ngOnInit(): void {
-    this.loadConfiguration();
+  constructor(public service: StatemachineService) {
+    this.loadConfiguration()
   }
 
   createNewInstance() {
@@ -52,7 +47,7 @@ export class MenuComponent {
   }
 
   openHelpDialog() {
-    this.dialog.open(HelpDialogComponent);
+    this.service.openHelpDialog();
   }
 
   onFileUpload(e: Event) {
