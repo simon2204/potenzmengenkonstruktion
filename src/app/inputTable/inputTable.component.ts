@@ -1,4 +1,4 @@
-import {ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core'; // Removed ViewChild
+import {ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit} from '@angular/core'; // Removed ViewChild
 import {CommonModule} from '@angular/common';
 import {StateBlockComponent} from "./state-block/state-block.component";
 import {EndlicherState} from "../endlicherautomat/EndlicherState";
@@ -353,6 +353,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
     if (this.isCheckMode) return;
     this.activeCell = rowId;
     this.activeCellType = type;
+    this.cdRef.detectChanges();
   }
 
   addStateToCell(state: EndlicherState): void {
@@ -506,18 +507,74 @@ export class InputTableComponent implements OnInit, OnDestroy {
     }
   }
 
-  handleKeyDown(event: KeyboardEvent, rowId: number, type: string): void {
-    if (this.isCheckMode) return;
-
-    if (this.activeCell !== rowId || this.activeCellType !== type) {
-      this.selectCell(rowId, type);
+  @HostListener('window:keydown', ['$event'])
+  handleGlobalKeyDown(event: KeyboardEvent): void {
+    if (this.isCheckMode) {
+      return;
     }
 
-    const rowIndex = this.tableData.findIndex(row => row.id === rowId);
-    const currentSymbols = this.symbols;
-    let colIndex = type === 'state' ? 0 : currentSymbols.indexOf(type) + 1;
+    // Spezielle Behandlung für Tab-Taste (vorwärts)
+    if (this.activeCell && this.activeCellType && event.key === 'Tab' && !event.shiftKey) {
+      const activeRowIndex = this.tableData.findIndex(row => row.id === this.activeCell);
+      if (activeRowIndex !== -1) {
+        const currentSymbols = this.symbols;
+        const activeColIndex = this.activeCellType === 'state' ? 0 : currentSymbols.indexOf(this.activeCellType) + 1;
 
-    if (rowIndex === -1 || colIndex < 0) return;
+        // Gültige Spalte prüfen (state oder ein existierendes Symbol)
+        const isValidColumn = this.activeCellType === 'state' || (activeColIndex > 0 && activeColIndex <= currentSymbols.length);
+
+        if (isValidColumn) {
+          const tableRows = Array.from(document.querySelectorAll('tbody tr'));
+          const activeRowElement = tableRows[activeRowIndex] as HTMLElement;
+          if (activeRowElement) {
+            const cellsInActiveRow = Array.from(activeRowElement.querySelectorAll('td'));
+            const activeCellElement = cellsInActiveRow[activeColIndex] as HTMLElement;
+
+            if (activeCellElement) {
+              if (document.activeElement !== activeCellElement) {
+                // Fokus ist NICHT auf der logisch aktiven Zelle.
+                // Setze den Fokus auf die logisch aktive Zelle.
+                activeCellElement.focus();
+                // WICHTIG: KEIN event.preventDefault() hier.
+                // Der Browser soll das Tab-Event jetzt vom NEUEN Fokuspunkt (activeCellElement)
+                // aus weiterverarbeiten. Das bedeutet, der Fokus springt zu activeCellElement
+                // UND DANN (als Teil derselben Tab-Aktion) zum nächsten Element.
+                // Unser Keydown-Handler ist für dieses Event hier fertig.
+                return;
+              }
+              // else: Fokus IST BEREITS auf der logisch aktiven Zelle.
+              // In diesem Fall tun wir nichts extra für Tab. Die Pfeiltasten-Logik
+              // unten wird durch die validArrowKeys-Prüfung übersprungen.
+              // Der Browser führt das normale Tabben aus.
+            }
+          }
+        }
+      }
+    } // Ende der speziellen Tab-Behandlung
+
+    // Pfeiltasten-Logik (nur wenn eine Zelle aktiv ist für die Navigation)
+    if (!this.activeCell || !this.activeCellType) {
+      return;
+    }
+
+    const validArrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+    if (!validArrowKeys.includes(event.key)) {
+      return; // Auf andere Tasten (inkl. Tab, das oben behandelt wurde oder durchfiel) nicht reagieren
+    }
+
+    // ----- Bestehende Pfeiltasten-Logik beginnt hier -----
+    const currentRowId = this.activeCell;
+    const currentCellType = this.activeCellType;
+
+    const rowIndex = this.tableData.findIndex(row => row.id === currentRowId);
+    if (rowIndex === -1) return;
+
+
+    const currentSymbols = this.symbols;
+    let colIndex = currentCellType === 'state' ? 0 : currentSymbols.indexOf(currentCellType) + 1;
+    const isValidCurrentColumn = currentCellType === 'state' || (colIndex > 0 && colIndex <= currentSymbols.length);
+    if (!isValidCurrentColumn) return;
+
 
     let newRowIndex = rowIndex;
     let newColIndex = colIndex;
@@ -536,14 +593,20 @@ export class InputTableComponent implements OnInit, OnDestroy {
       if (!newRow) return;
 
       const newType = newColIndex === 0 ? 'state' : currentSymbols[newColIndex - 1];
+      // Sicherstellen, dass newType auch ein gültiger Typ ist bevor selectCell aufgerufen wird
+      if (newType === undefined && newColIndex > 0) return; // Ungültiger Sprung nach rechts/links bei Symbolen
+
       this.selectCell(newRow.id, newType);
 
       setTimeout(() => {
         const tableRows = Array.from(document.querySelectorAll('tbody tr'));
-        if (tableRows[newRowIndex]) {
-          const cells = Array.from(tableRows[newRowIndex].querySelectorAll('td'));
-          const targetCell = cells[newColIndex] as HTMLElement;
-          if (targetCell) targetCell.focus();
+        const targetRowElement = tableRows[newRowIndex] as HTMLElement;
+        if (targetRowElement) {
+          const cells = Array.from(targetRowElement.querySelectorAll('td'));
+          const targetCellElement = cells[newColIndex] as HTMLElement;
+          if (targetCellElement) {
+            targetCellElement.focus();
+          }
         }
       }, 0);
     }

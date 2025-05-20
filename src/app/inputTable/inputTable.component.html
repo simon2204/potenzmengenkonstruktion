@@ -52,8 +52,7 @@
             <td [class]="!isCheckMode && activeCell === row.id && activeCellType === 'state' ? 'table-cell-active' : 'table-cell-first'"
                 [attr.tabindex]="isCheckMode ? -1 : 0"
                 (click)="!isCheckMode && selectCell(row.id, 'state')"
-                (focus)="!isCheckMode && selectCell(row.id, 'state')"
-                (keydown)="!isCheckMode && handleKeyDown($event, row.id, 'state')">
+                (focus)="!isCheckMode && selectCell(row.id, 'state')">
                 <div class="cell-blocks-container">
                     <!-- Verwende displayStates und übergebe Status -->
                     <app-state-block *ngFor="let ds of row.displayStates; trackBy: trackDisplayState"
@@ -77,8 +76,7 @@
                 [class]="!isCheckMode && activeCell === row.id && activeCellType === symbol ? 'table-cell-active' : 'table-cell'"
                 [attr.tabindex]="isCheckMode ? -1 : 0"
                 (click)="!isCheckMode && selectCell(row.id, symbol)"
-                (focus)="!isCheckMode && selectCell(row.id, symbol)"
-                (keydown)="!isCheckMode && handleKeyDown($event, row.id, symbol)">
+                (focus)="!isCheckMode && selectCell(row.id, symbol)">
                 <div class="cell-blocks-container">
                     <!-- Verwende displayTransitions und übergebe Status -->
                     <app-state-block *ngFor="let ds of row.displayTransitions[symbol] || []; trackBy: trackDisplayState"
