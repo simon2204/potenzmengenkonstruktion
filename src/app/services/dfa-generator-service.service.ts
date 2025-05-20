@@ -44,18 +44,9 @@ export class DfaGeneratorService {
   private buildNfaStateMap(automat: EndlicherAutomat): void {
     this.nfaStateMap.clear();
     this.nfaStateMap.set(this.emptyState.id, this.emptyState);
-
-    if (automat && automat.getAllStates()) {
-      automat.getAllStates().forEach(state => {
-        if (state && typeof state.id !== 'undefined') {
-          this.nfaStateMap.set(state.id, state as EndlicherState);
-        } else {
-          console.warn("DFA Generator Service: Zustand ohne ID gefunden:", state);
-        }
-      });
-    } else {
-      console.warn("DFA Generator Service: buildNfaStateMap aufgerufen ohne Automat oder Zustände.");
-    }
+    automat.getAllStates().forEach(state => {
+      this.nfaStateMap.set(state.id, state as EndlicherState);
+    });
   }
 
   /**
@@ -101,9 +92,7 @@ export class DfaGeneratorService {
   /**
    * Gets the alphabet of the automaton (all unique transition symbols except Epsilon).
    */
-  public getAlphabet(automat: EndlicherAutomat | null): string[] {
-    if (!automat) return [];
-
+  public getAlphabet(automat: EndlicherAutomat): string[] {
     const uniqueSymbols: Set<string> = new Set();
     const allStates = automat.getAllStates() as EndlicherState[];
 
@@ -130,12 +119,7 @@ export class DfaGeneratorService {
    * Core logic: Powerset construction.
    * Generates the solution table data for a given NFA.
    */
-  public generateSolutionTable(nfa: EndlicherAutomat | null): SolutionTableRow[] {
-    if (!nfa) {
-      console.error("DFA Generator Service: Kein Automat (NFA) vorhanden.");
-      throw new Error("Kein Automat (NFA) für die Generierung vorhanden.");
-    }
-
+  public generateSolutionTable(nfa: EndlicherAutomat): SolutionTableRow[] {
     this.buildNfaStateMap(nfa); // Build/update the NFA state map
 
     if (this.nfaStateMap.size === 0 || (this.nfaStateMap.size === 1 && this.nfaStateMap.has(this.emptyState.id) && nfa.getAllStates().length > 0) ) {
@@ -209,7 +193,7 @@ export class DfaGeneratorService {
 
       for (const symbol of alphabet) {
         const movedStates = EndlicherState.move2(Array.from(currentNfaStatesSet), symbol);
-        const nextNfaStateClosureSet = new Set(EndlicherState.eClosure2(new Set(movedStates)));
+        const nextNfaStateClosureSet = new Set(EndlicherState.eClosure2(movedStates));
         const nextStateKey = this.getStateSetKey(nextNfaStateClosureSet);
 
         currentRow.transitions[symbol] = this.getStatesFromSet(nextNfaStateClosureSet);
