@@ -25,7 +25,7 @@ export interface MarkerItem {
 export class DfaGeneratorService {
 
   private emptyState!: EndlicherState;
-  private nfaStateMap = new Map<number | string, EndlicherState>();
+  private nfaStateMap = new Map<number, EndlicherState>();
 
   constructor() {
     this.initializeEmptyState();
@@ -100,7 +100,6 @@ export class DfaGeneratorService {
 
   /**
    * Gets the alphabet of the automaton (all unique transition symbols except Epsilon).
-   * Public, so components can use it.
    */
   public getAlphabet(automat: EndlicherAutomat | null): string[] {
     if (!automat) return [];
@@ -115,7 +114,7 @@ export class DfaGeneratorService {
             const transition = trans as EndlicheTransition;
             if (transition.transitionSymbols && Array.isArray(transition.transitionSymbols)) {
               transition.transitionSymbols.forEach(sym => {
-                if (sym !== EndlicherAutomat.epsilon && typeof sym === 'string') {
+                if (sym !== EndlicherAutomat.epsilon) {
                   uniqueSymbols.add(sym);
                 }
               });
