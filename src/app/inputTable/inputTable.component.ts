@@ -368,6 +368,8 @@ export class InputTableComponent implements OnInit, OnDestroy {
       if (existingIndex === -1) {
         row.displayStates.push({ state: state, status: StateStatus.original });
         row.displayStates.sort((a, b) => (a.state.id ?? -1) - (b.state.id ?? -1));
+      } else {
+        row.displayStates.splice(existingIndex, 1);
       }
     } else {
       const symbol = this.activeCellType as string;
@@ -380,6 +382,9 @@ export class InputTableComponent implements OnInit, OnDestroy {
         if (isLastRow) {
           this.checkAndAddEmptyRowIfNeeded();
         }
+      } else {
+        transitionStates.splice(existingIndex, 1);
+        this.checkAndAddEmptyRowIfNeeded();
       }
     }
     this.cdRef.detectChanges();
