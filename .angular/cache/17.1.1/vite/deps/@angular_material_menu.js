@@ -1,15 +1,13 @@
 import {
+  DomPortalOutlet,
   Overlay,
   OverlayConfig,
-  OverlayModule
-} from "./chunk-RA3KSGET.js";
-import {
-  DomPortalOutlet,
+  OverlayModule,
   TemplatePortal
-} from "./chunk-LTORWAWI.js";
+} from "./chunk-FY734XDZ.js";
 import {
   CdkScrollableModule
-} from "./chunk-3OSCV3W5.js";
+} from "./chunk-AWJJ7RZS.js";
 import {
   DOWN_ARROW,
   Directionality,
@@ -28,20 +26,21 @@ import {
   isFakeMousedownFromScreenReader,
   isFakeTouchstartFromScreenReader,
   normalizePassiveListenerOptions
-} from "./chunk-EBMWN25W.js";
+} from "./chunk-T7HHLKH5.js";
 import {
   animate,
   state,
   style,
   transition,
   trigger
-} from "./chunk-FG6BBQIB.js";
-import "./chunk-OFRTES5F.js";
+} from "./chunk-H6CXB3YM.js";
+import "./chunk-UHXFCMGA.js";
+import "./chunk-OXZZUK4X.js";
 import {
   CommonModule,
   DOCUMENT,
   NgClass
-} from "./chunk-U7U4XXW4.js";
+} from "./chunk-ISOSFC42.js";
 import {
   ApplicationRef,
   ChangeDetectionStrategy,
@@ -64,24 +63,13 @@ import {
   Output,
   QueryList,
   Self,
-  Subject,
-  Subscription,
   TemplateRef,
   ViewChild,
   ViewContainerRef,
   ViewEncapsulation$1,
-  asapScheduler,
   booleanAttribute,
-  delay,
-  filter,
   inject,
-  merge,
-  of,
   setClassMetadata,
-  startWith,
-  switchMap,
-  take,
-  takeUntil,
   ɵɵInputTransformsFeature,
   ɵɵProvidersFeature,
   ɵɵStandaloneFeature,
@@ -111,9 +99,22 @@ import {
   ɵɵrestoreView,
   ɵɵtemplate,
   ɵɵviewQuery
-} from "./chunk-TUDATZZ7.js";
+} from "./chunk-W3EUJSHM.js";
+import {
+  Subject,
+  Subscription,
+  asapScheduler,
+  delay,
+  filter,
+  merge,
+  of,
+  startWith,
+  switchMap,
+  take,
+  takeUntil
+} from "./chunk-SXIXOCJ4.js";
 
-// ../../../node_modules/@angular/material/fesm2022/menu.mjs
+// node_modules/@angular/material/fesm2022/menu.mjs
 var _c0 = ["mat-menu-item", ""];
 function MatMenuItem_Conditional_4_Template(rf, ctx) {
   if (rf & 1) {

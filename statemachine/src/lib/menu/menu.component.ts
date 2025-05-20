@@ -1,12 +1,12 @@
-import { Component, Input } from '@angular/core';
-import { MatDialog } from '@angular/material/dialog';
+import {Component, Input, OnInit} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HelpDialogComponent } from './help-dialog/help-dialog.component';
 import { StatemachineService } from '../statemachine/statemachine.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { environment } from '../../../../src/environments/environment';
+import {HttpClient} from "@angular/common/http";
+import {firstValueFrom} from "rxjs";
 
 @Component({
   selector: 'app-menu',
@@ -15,15 +15,22 @@ import { environment } from '../../../../src/environments/environment';
   templateUrl: './menu.component.html',
   styleUrl: './menu.component.scss'
 })
-export class MenuComponent {
+export class MenuComponent implements OnInit {
 
   @Input() baseURL!: string;
 
   public vorlesungsbeispiele: any[] = [];
   public uebungsaufgaben: any[] = [];
 
-  constructor(public service: StatemachineService) {
-    this.loadConfiguration()
+  constructor(
+      public service: StatemachineService,
+      private http: HttpClient,
+  ) {
+
+  }
+
+  ngOnInit() {
+    this.loadConfig()
   }
 
   createNewInstance() {
@@ -63,32 +70,35 @@ export class MenuComponent {
     target.value = '';
   }
 
-  loadConfiguration() {
-    const url = environment.baseURL + '/assets/config.json';
-    fetch(url)
-      .then((response) => response.json())
-      .then((config) => {
-        this.loadVorlesungsbeispiele(config);
-        this.loadUebungsaufgaben(config);
-      });
+  loadConfig(): void {
+    const url = `assets/config.json`;
+    this.http.get<any>(url).subscribe({
+      next: (config) => {
+        // Hier kann man dann loadTasks etc. aufrufen
+        this.loadTasks('Vorlesungsbeispiele', this.vorlesungsbeispiele, config);
+        this.loadTasks('Uebungsaufgaben', this.uebungsaufgaben, config);
+      },
+      error: (error) => {
+        console.error('Failed to load config:', error);
+      }
+    });
   }
 
-  loadVorlesungsbeispiele(config: any) {
-    config['Vorlesungsbeispiele'].forEach((aufgabe: any, index: number) => {
-      this.fetchJSON('Vorlesungsbeispiele', aufgabe['filename']).then(
-        (aufgabe) => {
-          this.vorlesungsbeispiele[index] = aufgabe;
+  async loadTasks(type: string, targetArray: any[], config: any): Promise<void> {
+    const tasks = config[type];
+    if (tasks && Array.isArray(tasks)) {
+      for (const [index, task] of tasks.entries()) {
+        const url = `assets/${type}/${task.filename}.json`;
+        try {
+          const data = await firstValueFrom(this.http.get(url));
+          targetArray[index] = data;
+        } catch (error) {
+          console.error(`Failed to load ${type}/${task.filename}:`, error);
         }
-      );
-    });
-  }
-
-  loadUebungsaufgaben(config: any) {
-    config['Uebungsaufgaben'].forEach((aufgabe: any, index: number) => {
-      this.fetchJSON('Uebungsaufgaben', aufgabe['filename']).then((aufgabe) => {
-        this.uebungsaufgaben[index] = aufgabe;
-      });
-    });
+      }
+    } else {
+      console.warn(`No tasks found for type: ${type}`);
+    }
   }
 
   async fetchJSON(type: string, name: string) {
