@@ -1,6 +1,17 @@
 <div class="container">
     <h2 class="header">Potenzmengenkonstruktion</h2>
 
+    <!-- Neue Checkbox für Highlighting -->
+    <div class="highlight-control" *ngIf="!isCheckMode">
+        <label class="checkbox-label">
+            <input type="checkbox"
+                   [(ngModel)]="highlightTransitions"
+                   (change)="toggleHighlighting()"
+                   class="highlight-checkbox">
+            <span>Übergänge im Automaten hervorheben</span>
+        </label>
+    </div>
+
     <!-- Palette nur im Editier-Modus anzeigen/aktivieren -->
     <div *ngIf="!isCheckMode">
         <p class="state-label">Verfügbare Zustände:</p>
@@ -18,9 +29,9 @@
             <app-state-block
                     style="cursor: pointer;"
                     *ngFor="let marker of markers"
-                             [state]="marker.label"
-                             [removable]="false"
-                             (click)="!isCheckMode && activeCell && activeCellType === 'state' && toggleMarker(activeCell, marker.id)">
+                    [state]="marker.label"
+                    [removable]="false"
+                    (click)="!isCheckMode && activeCell && activeCellType === 'state' && toggleMarker(activeCell, marker.id)">
             </app-state-block>
         </div>
     </div>
@@ -104,8 +115,11 @@
     <!-- Steuerungselemente -->
     <div class="controls">
         <!-- Prüfen-Button nur im Editier-Modus -->
-        <button *ngIf="!isCheckMode" class="button primary-button" (click)="checkTable()">
-            Prüfen
+        <button *ngIf="!isCheckMode"
+                class="button primary-button"
+                (click)="checkTable()"
+                [disabled]="isProcessingCheck">
+            {{ isProcessingCheck ? 'Prüfe...' : 'Prüfen' }}
         </button>
         <!-- Zurücksetzen-Button immer anzeigen, Text ggf. anpassen -->
         <button class="button danger-button" (click)="resetTable()">

@@ -1,7 +1,8 @@
-// Erweiterte Version von inputTable.component.ts mit Speicher- und Ladefunktionalität
+// Erweiterte Version von inputTable.component.ts mit Transition-Highlighting
 
 import {ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit} from '@angular/core';
 import {CommonModule} from '@angular/common';
+import {FormsModule} from '@angular/forms';
 import {StateBlockComponent} from "./state-block/state-block.component";
 import {EndlicherState} from "../endlicherautomat/EndlicherState";
 import {StatemachineService} from "../../../statemachine/src/lib/statemachine/statemachine.service";
@@ -43,7 +44,7 @@ interface TableRow {
   templateUrl: './inputTable.component.html',
   styleUrls: ['./inputTable.component.scss'],
   standalone: true,
-  imports: [CommonModule, StateBlockComponent]
+  imports: [CommonModule, FormsModule, StateBlockComponent]
 })
 export class InputTableComponent implements OnInit, OnDestroy {
 
@@ -53,6 +54,12 @@ export class InputTableComponent implements OnInit, OnDestroy {
   private autoSaveInterval: any;
   private autoSaveEnabled: boolean = true;
   private autoSaveIntervalTime: number = 3000; // 3 Sekunden
+
+  // Neue Properties für Highlighting
+  highlightTransitions: boolean = false;
+  private highlightedTransitions: EndlicheTransition[] = [];
+  private highlightedStates: EndlicherState[] = [];
+  protected isProcessingCheck: boolean = false;
 
   markers: MarkerItem[] = [
     { id: '(A)', label: 'A' },
@@ -88,6 +95,82 @@ export class InputTableComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.serviceSubscription?.unsubscribe();
     this.stopAutoSave();
+    this.clearHighlights();
+  }
+
+  // Neue Methode: Toggle Highlighting
+  toggleHighlighting(): void {
+    this.highlightTransitions = !this.highlightTransitions;
+    if (this.highlightTransitions) {
+      this.updateHighlights();
+    } else {
+      this.clearHighlights();
+    }
+    this.saveHighlightSettingToLocalStorage();
+  }
+
+  // Neue Methode: Update Highlights basierend auf aktiver Zelle
+  private updateHighlights(): void {
+    this.clearHighlights();
+
+    if (!this.highlightTransitions || !this.activeCell || !this.activeCellType || this.isCheckMode) {
+      return;
+    }
+
+    const activeRow = this.tableData.find(row => row.id === this.activeCell);
+    if (!activeRow) return;
+
+    // Hole die Ausgangszustände aus der ersten Spalte
+    const sourceStates = activeRow.displayStates
+        .filter(ds => ds.state.id !== this.emptyState.id)
+        .map(ds => ds.state);
+
+    if (sourceStates.length === 0) return;
+
+    // Wenn wir in der ersten Spalte sind, nichts highlighten (nur Transitionen sollen leuchten)
+    if (this.activeCellType === 'state') {
+      return;
+    }
+
+    // Ansonsten highlighte die Transitionen für das aktuelle Symbol
+    const symbol = this.activeCellType;
+
+    // Finde alle Transitionen, die von den Ausgangszuständen mit dem aktuellen Symbol ausgehen
+    sourceStates.forEach(sourceState => {
+      sourceState.transitions.forEach(transition => {
+        const endlicheTransition = transition as EndlicheTransition;
+        if (endlicheTransition.transitionSymbols.includes(symbol)) {
+          endlicheTransition.highlight = true;
+          this.highlightedTransitions.push(endlicheTransition);
+        }
+      });
+    });
+  }
+
+  // Neue Methode: Clear all highlights
+  private clearHighlights(): void {
+    this.highlightedTransitions.forEach(transition => {
+      transition.highlight = false;
+    });
+    this.highlightedTransitions = [];
+
+    this.highlightedStates.forEach(state => {
+      state.highlight = false;
+    });
+    this.highlightedStates = [];
+  }
+
+  // Speichere Highlight-Einstellung
+  private saveHighlightSettingToLocalStorage(): void {
+    localStorage.setItem('highlightTransitions', this.highlightTransitions.toString());
+  }
+
+  // Lade Highlight-Einstellung
+  private loadHighlightSettingFromLocalStorage(): void {
+    const saved = localStorage.getItem('highlightTransitions');
+    if (saved !== null) {
+      this.highlightTransitions = saved === 'true';
+    }
   }
 
   private startAutoSave(): void {
@@ -109,7 +192,6 @@ export class InputTableComponent implements OnInit, OnDestroy {
 
   private serializeTableData(): SerializedTableRow[] {
     if (this.isCheckMode && this.originalTableDataBeforeCheck) {
-      // Im Check-Modus die originalen Daten serialisieren
       return this.serializeTableRows(this.originalTableDataBeforeCheck);
     }
     return this.serializeTableRows(this.tableData);
@@ -147,7 +229,6 @@ export class InputTableComponent implements OnInit, OnDestroy {
     const stateMap = new Map<number, EndlicherState>();
     stateMap.set(this.emptyState.id, this.emptyState);
 
-    // Build state map from current automaton
     this.stateMachine.getAllStates().forEach(state => {
       const endlicherState = state as EndlicherState;
       stateMap.set(endlicherState.id, endlicherState);
@@ -177,7 +258,6 @@ export class InputTableComponent implements OnInit, OnDestroy {
         displayTransitions: {}
       };
 
-      // Deserialize transitions
       Object.entries(serializedRow.displayTransitions).forEach(([symbol, serializedStates]) => {
         row.displayTransitions[symbol] = serializedStates
             .map(sds => {
@@ -195,6 +275,9 @@ export class InputTableComponent implements OnInit, OnDestroy {
 
       return row;
     });
+
+    // Lade Highlight-Einstellung
+    this.loadHighlightSettingFromLocalStorage();
 
     this.cdRef.detectChanges();
   }
@@ -256,32 +339,53 @@ export class InputTableComponent implements OnInit, OnDestroy {
     this.activeCell = null;
     this.activeCellType = null;
     this.originalTableDataBeforeCheck = null;
+    this.loadHighlightSettingFromLocalStorage();
   }
 
-  async checkTable(): Promise<void> {
-    if (this.isCheckMode) { return; }
-    if (!this.stateMachine) { alert("Kein Automat vorhanden, um Lösung zu generieren."); return; }
-
-    console.log("Starte Generierung der Lösung für Vergleich...");
-    let solutionData: SolutionTableRow[];
-    try {
-      solutionData = this.dfaGeneratorService.generateSolutionTable(this.stateMachine);
-      console.log("Lösung generiert:", solutionData);
-    } catch (error: any) {
-      alert(`Lösung konnte nicht generiert werden: ${error.message}`);
-      console.error("Fehler beim Generieren der Lösung:", error);
+  checkTable(): void {
+    if (this.isCheckMode || this.isProcessingCheck) { return; }
+    if (!this.stateMachine) {
+      alert("Kein Automat vorhanden, um Lösung zu generieren.");
       return;
     }
 
-    if (!solutionData) { alert("Lösung konnte nicht generiert werden (unerwarteter Zustand)."); return; }
-
-    this.originalTableDataBeforeCheck = JSON.parse(JSON.stringify(this.tableData));
-    this.performComparisonBasedOnSolutionOrder(solutionData);
-
-    this.isCheckMode = true;
-    this.activeCell = null;
-    this.activeCellType = null;
+    // Set processing flag
+    this.isProcessingCheck = true;
     this.cdRef.detectChanges();
+
+    console.log("Starte Generierung der Lösung für Vergleich...");
+
+    // Use setTimeout to ensure UI updates
+    setTimeout(() => {
+      let solutionData: SolutionTableRow[];
+      try {
+        solutionData = this.dfaGeneratorService.generateSolutionTable(this.stateMachine);
+        console.log("Lösung generiert:", solutionData);
+      } catch (error: any) {
+        alert(`Lösung konnte nicht generiert werden: ${error.message}`);
+        console.error("Fehler beim Generieren der Lösung:", error);
+        this.isProcessingCheck = false;
+        this.cdRef.detectChanges();
+        return;
+      }
+
+      if (!solutionData) {
+        alert("Lösung konnte nicht generiert werden (unerwarteter Zustand).");
+        this.isProcessingCheck = false;
+        this.cdRef.detectChanges();
+        return;
+      }
+
+      this.originalTableDataBeforeCheck = JSON.parse(JSON.stringify(this.tableData));
+      this.performComparisonBasedOnSolutionOrder(solutionData);
+
+      this.isCheckMode = true;
+      this.activeCell = null;
+      this.activeCellType = null;
+      this.clearHighlights(); // Clear highlights when entering check mode
+      this.isProcessingCheck = false;
+      this.cdRef.detectChanges();
+    }, 100);
   }
 
   exitCheckMode(): void {
@@ -481,6 +585,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
     if (this.isCheckMode) return;
     this.activeCell = rowId;
     this.activeCellType = type;
+    this.updateHighlights(); // Update highlights when cell selection changes
     this.cdRef.detectChanges();
   }
 
@@ -500,6 +605,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
       } else {
         row.displayStates.splice(existingIndex, 1);
       }
+      this.updateHighlights(); // Update highlights when states change
     } else {
       const symbol = this.activeCellType as string;
       if (!row.displayTransitions[symbol]) row.displayTransitions[symbol] = [];
@@ -516,7 +622,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
         this.checkAndAddEmptyRowIfNeeded();
       }
     }
-    this.saveTableToAutomat(); // Save after each change
+    this.saveTableToAutomat();
     this.cdRef.detectChanges();
   }
 
@@ -529,6 +635,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
         ds => ds.state.id !== displayStateToRemove.state.id
     );
     this.adjustEmptyRows();
+    this.updateHighlights(); // Update highlights when states change
     this.saveTableToAutomat();
   }
 
@@ -637,6 +744,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
       this.exitCheckMode();
     } else {
       this.initializeEmptyTable();
+      this.clearHighlights();
       this.saveTableToAutomat();
     }
   }
