@@ -2,7 +2,6 @@
 
 import {ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit} from '@angular/core';
 import {CommonModule} from '@angular/common';
-import {FormsModule} from '@angular/forms';
 import {StateBlockComponent} from "./state-block/state-block.component";
 import {EndlicherState} from "../endlicherautomat/EndlicherState";
 import {StatemachineService} from "../../../statemachine/src/lib/statemachine/statemachine.service";
@@ -44,7 +43,7 @@ interface TableRow {
   templateUrl: './inputTable.component.html',
   styleUrls: ['./inputTable.component.scss'],
   standalone: true,
-  imports: [CommonModule, FormsModule, StateBlockComponent]
+  imports: [CommonModule, StateBlockComponent]
 })
 export class InputTableComponent implements OnInit, OnDestroy {
 
@@ -99,14 +98,28 @@ export class InputTableComponent implements OnInit, OnDestroy {
   }
 
   // Neue Methode: Toggle Highlighting
-  toggleHighlighting(): void {
+  toggleHighlighting(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    // Toggle the state immediately
     this.highlightTransitions = !this.highlightTransitions;
+    this.saveHighlightSettingToLocalStorage();
+
+    // Apply the highlighting immediately
     if (this.highlightTransitions) {
       this.updateHighlights();
     } else {
       this.clearHighlights();
     }
-    this.saveHighlightSettingToLocalStorage();
+
+    // Force update through service to ensure SVG re-renders
+    setTimeout(() => {
+      if (this.service && (this.service as any).automatonChangedSubject) {
+        (this.service as any).automatonChangedSubject.next();
+      }
+    }, 10);
   }
 
   // Neue Methode: Update Highlights basierend auf aktiver Zelle
@@ -170,6 +183,10 @@ export class InputTableComponent implements OnInit, OnDestroy {
     const saved = localStorage.getItem('highlightTransitions');
     if (saved !== null) {
       this.highlightTransitions = saved === 'true';
+      // Apply highlighting if enabled and there's an active cell
+      if (this.highlightTransitions && this.activeCell && this.activeCellType) {
+        this.updateHighlights();
+      }
     }
   }
 

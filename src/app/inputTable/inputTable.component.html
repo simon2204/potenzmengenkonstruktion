@@ -5,8 +5,8 @@
     <div class="highlight-control" *ngIf="!isCheckMode">
         <label class="checkbox-label">
             <input type="checkbox"
-                   [(ngModel)]="highlightTransitions"
-                   (change)="toggleHighlighting()"
+                   [checked]="highlightTransitions"
+                   (change)="toggleHighlighting($event)"
                    class="highlight-checkbox">
             <span>Übergänge im Automaten hervorheben</span>
         </label>
