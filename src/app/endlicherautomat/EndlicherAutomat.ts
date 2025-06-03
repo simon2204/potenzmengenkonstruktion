@@ -1,4 +1,4 @@
-// Nicht kommentierte Methoden des Codes stammt aus dem vorgegebenen Projekt "Endlicher Automat"
+// Erweiterte Version von EndlicherAutomat.ts mit Tabellenspeicherung
 
 import { Result } from '../../../statemachine/src/lib/statemachine/Result';
 import { Point } from '../../../statemachine/src/lib/statemachine/drawingprimitives/Point';
@@ -8,9 +8,32 @@ import { EndlicheTransition } from './EndlicheTransition';
 import { EndlicherState } from './EndlicherState';
 import { State } from '../../../statemachine/src/lib/statemachine/state';
 
+// Neue Interfaces für die Serialisierung der Tabelle
+export interface SerializedDisplayState {
+  stateId: number;
+  status: number;
+}
+
+export interface SerializedDisplayMarker {
+  id: string;
+  label: string;
+  status: number;
+}
+
+export interface SerializedTableRow {
+  id: number;
+  rowStatus: string;
+  displayStates: SerializedDisplayState[];
+  displayMarkers: SerializedDisplayMarker[];
+  displayTransitions: { [symbol: string]: SerializedDisplayState[] };
+}
+
 export class EndlicherAutomat extends StateMachine {
   // Optional delegate for handling events or logic related to the automaton's state.
   delegate?: EndlicherAutomatDelegate;
+
+  // Neue Property für die Tabellendaten
+  tableData?: SerializedTableRow[];
 
   set input(input: string) {
     this._input = input;
@@ -30,9 +53,9 @@ export class EndlicherAutomat extends StateMachine {
   // Create a unique key for a set of states
   private getStateKey(states: EndlicherState[]): string {
     return states
-      .map((state) => state.name)
-      .sort()
-      .join(', ');
+        .map((state) => state.name)
+        .sort()
+        .join(', ');
   }
 
   // Check if any of the given states are final states
@@ -55,14 +78,14 @@ export class EndlicherAutomat extends StateMachine {
   get uniqueDfaTransitionSymbols(): string[] {
     const symbolSet = new Set<string>();
     this.constructDfa()
-      .getAllTransitions()
-      .forEach((transition) => {
-        transition.labels().forEach((label) => {
-          label.text
-            .split(',')
-            .forEach((symbol) => symbolSet.add(symbol.trim()));
+        .getAllTransitions()
+        .forEach((transition) => {
+          transition.labels().forEach((label) => {
+            label.text
+                .split(',')
+                .forEach((symbol) => symbolSet.add(symbol.trim()));
+          });
         });
-      });
 
     return Array.from(symbolSet);
   }
@@ -72,10 +95,10 @@ export class EndlicherAutomat extends StateMachine {
     const stateSet = new Set<string>();
 
     this.constructDfa()
-      .getAllStates()
-      .forEach((state) => {
-        stateSet.add(state.name.trim());
-      });
+        .getAllStates()
+        .forEach((state) => {
+          stateSet.add(state.name.trim());
+        });
     return Array.from(stateSet);
   }
 
@@ -84,16 +107,16 @@ export class EndlicherAutomat extends StateMachine {
     const stateSet = new Set<string>();
 
     this.constructDfa()
-      .getAllStates()
-      .forEach((state) => {
-        state.name.split(',').forEach((name) => {
-          stateSet.add(name.trim());
+        .getAllStates()
+        .forEach((state) => {
+          state.name.split(',').forEach((name) => {
+            stateSet.add(name.trim());
+          });
         });
-      });
 
     // Convert the Set to an array and sort it alphabetically
     const sortedStates = Array.from(stateSet).sort((a, b) =>
-      a.localeCompare(b)
+        a.localeCompare(b)
     );
 
     return sortedStates;
@@ -113,7 +136,7 @@ export class EndlicherAutomat extends StateMachine {
 
     // Determine the start state of the DFA (epsilon closure of the NFA start state) and add it to the map
     const startStateClosureSet = new Set(
-      EndlicherState.eClosure2(new Set([this.startState as EndlicherState]))
+        EndlicherState.eClosure2(new Set([this.startState as EndlicherState]))
     );
     const startStateKey = this.getStateKey(Array.from(startStateClosureSet));
     dfaStateMap.set(startStateKey, startStateClosureSet);
@@ -142,7 +165,7 @@ export class EndlicherAutomat extends StateMachine {
 
       // Check if this state already exists in the DFA
       let currentDFAState: EndlicherState | undefined = dfa.allStates.find(
-        (s) => s.name === validStateKey
+          (s) => s.name === validStateKey
       ) as EndlicherState;
 
       // If the state does not exist, create it
@@ -168,9 +191,9 @@ export class EndlicherAutomat extends StateMachine {
 
         // Calculate new NFA states for this symbol
         const nextNFAStateClosure = new Set(
-          EndlicherState.eClosure2(
-            new Set(EndlicherState.move2(Array.from(currentNFAStates), symbol))
-          )
+            EndlicherState.eClosure2(
+                new Set(EndlicherState.move2(Array.from(currentNFAStates), symbol))
+            )
         );
 
         const nextStateKey = this.getStateKey(Array.from(nextNFAStateClosure));
@@ -180,7 +203,7 @@ export class EndlicherAutomat extends StateMachine {
 
         // Find the next DFA state or create it if it doesn't exist
         let nextDFAState: EndlicherState | undefined = dfa.allStates.find(
-          (s) => s.name === validNextStateKey
+            (s) => s.name === validNextStateKey
         ) as EndlicherState;
 
         if (!nextDFAState) {
@@ -197,7 +220,7 @@ export class EndlicherAutomat extends StateMachine {
 
         // Check if the transition already exists
         let existingTransition = currentDFAState.transitions.find(
-          (transition) => transition.destination === nextDFAState
+            (transition) => transition.destination === nextDFAState
         );
 
         if (existingTransition) {
@@ -208,8 +231,8 @@ export class EndlicherAutomat extends StateMachine {
         } else {
           // Create a new transition if it does not exist
           const transition = new EndlicheTransition(
-            currentDFAState,
-            nextDFAState
+              currentDFAState,
+              nextDFAState
           );
           transition.transitionSymbols.push(symbol);
           currentDFAState.transitions.push(transition);
@@ -256,8 +279,8 @@ export class EndlicherAutomat extends StateMachine {
         const destinationStates = new Set<string>();
         for (const transition of dfaState.transitions) {
           if (
-            transition instanceof EndlicheTransition &&
-            transition.includesSymbol(symbol)
+              transition instanceof EndlicheTransition &&
+              transition.includesSymbol(symbol)
           ) {
             destinationStates.add(transition.destination.name);
           }
@@ -349,6 +372,8 @@ export class EndlicherAutomat extends StateMachine {
       states: this.allStates,
       positiveTestcases: this.positiveTestcases,
       negativeTestcases: this.negativeTestcases,
+      // Neue Property für die Tabellendaten
+      tableData: this.tableData || null
     };
   }
 
@@ -365,9 +390,9 @@ export class EndlicherAutomat extends StateMachine {
     // Create all states
     for (const state of object.states) {
       const newState = automata.makeState(
-        state.origin.x,
-        state.origin.y,
-        state.id
+          state.origin.x,
+          state.origin.y,
+          state.id
       );
       newState.name = state.name;
       automata.allStates.push(newState);
@@ -398,7 +423,7 @@ export class EndlicherAutomat extends StateMachine {
       for (const transition of jsonState.transitions) {
         const destination = states.get(transition.destination)!;
         const newTransition = state.addTransition(
-          destination
+            destination
         ) as EndlicheTransition;
         newTransition.transitionSymbols = transition.transitionSymbols;
       }
@@ -420,11 +445,26 @@ export class EndlicherAutomat extends StateMachine {
     automata.title = object.title;
     automata.description = object.description;
 
+    // Lade die Tabellendaten, falls vorhanden
+    if (object.tableData) {
+      automata.tableData = object.tableData;
+    }
+
     return automata;
   }
 
   override activeStates(word: string): Set<State> {
     return new Set<State>();
+  }
+
+  // Neue Methode zum Setzen der Tabellendaten
+  setTableData(tableData: SerializedTableRow[]): void {
+    this.tableData = tableData;
+  }
+
+  // Neue Methode zum Abrufen der Tabellendaten
+  getTableData(): SerializedTableRow[] | undefined {
+    return this.tableData;
   }
 }
 

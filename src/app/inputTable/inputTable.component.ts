@@ -1,4 +1,6 @@
-import {ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit} from '@angular/core'; // Removed ViewChild
+// Erweiterte Version von inputTable.component.ts mit Speicher- und Ladefunktionalität
+
+import {ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {StateBlockComponent} from "./state-block/state-block.component";
 import {EndlicherState} from "../endlicherautomat/EndlicherState";
@@ -9,13 +11,12 @@ import {
   DfaGeneratorService,
   SolutionTableRow,
   MarkerItem
-} from '../services/dfa-generator-service.service'; // Import from service
-import {EndlicherAutomat} from "../endlicherautomat/EndlicherAutomat";
+} from '../services/dfa-generator-service.service';
+import {EndlicherAutomat, SerializedTableRow, SerializedDisplayState, SerializedDisplayMarker} from "../endlicherautomat/EndlicherAutomat";
 import {Subscription} from 'rxjs';
 import {StateStatus} from "./stateStatus";
 
 // ----------- Interfaces -----------
-// ... (DisplayState, DisplayMarker, TableRow interfaces remain the same) ...
 interface DisplayState {
   state: EndlicherState;
   status: StateStatus;
@@ -49,6 +50,9 @@ export class InputTableComponent implements OnInit, OnDestroy {
   private readonly emptyState: EndlicherState;
   private serviceSubscription: Subscription | null = null;
   private originalTableDataBeforeCheck: TableRow[] | null = null;
+  private autoSaveInterval: any;
+  private autoSaveEnabled: boolean = true;
+  private autoSaveIntervalTime: number = 3000; // 3 Sekunden
 
   markers: MarkerItem[] = [
     { id: '(A)', label: 'A' },
@@ -63,7 +67,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
   constructor(
       public service: StatemachineService,
       private cdRef: ChangeDetectorRef,
-      private dfaGeneratorService: DfaGeneratorService // Inject the new service
+      private dfaGeneratorService: DfaGeneratorService
   ) {
     const state = new EndlicherState(Point.zero, -1);
     state.name = "∅";
@@ -72,10 +76,145 @@ export class InputTableComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.initializeEmptyTable();
+    this.loadTableFromAutomat();
+    this.startAutoSave();
+
+    // Subscribe to automaton changes
+    this.serviceSubscription = this.service.onAutomatonChanged?.subscribe(() => {
+      this.loadTableFromAutomat();
+    });
   }
 
   ngOnDestroy(): void {
     this.serviceSubscription?.unsubscribe();
+    this.stopAutoSave();
+  }
+
+  private startAutoSave(): void {
+    if (this.autoSaveEnabled) {
+      this.autoSaveInterval = setInterval(() => {
+        this.saveTableToAutomat();
+        this.service.saveToBrowserCache();
+        console.log('Auto-saved to browser cache');
+      }, this.autoSaveIntervalTime);
+    }
+  }
+
+  private stopAutoSave(): void {
+    if (this.autoSaveInterval) {
+      clearInterval(this.autoSaveInterval);
+      this.autoSaveInterval = null;
+    }
+  }
+
+  private serializeTableData(): SerializedTableRow[] {
+    if (this.isCheckMode && this.originalTableDataBeforeCheck) {
+      // Im Check-Modus die originalen Daten serialisieren
+      return this.serializeTableRows(this.originalTableDataBeforeCheck);
+    }
+    return this.serializeTableRows(this.tableData);
+  }
+
+  private serializeTableRows(rows: TableRow[]): SerializedTableRow[] {
+    return rows.map(row => ({
+      id: row.id,
+      rowStatus: row.rowStatus,
+      displayStates: row.displayStates.map(ds => ({
+        stateId: ds.state.id ?? -1,
+        status: ds.status
+      })),
+      displayMarkers: row.displayMarkers.map(dm => ({
+        id: dm.id,
+        label: dm.label,
+        status: dm.status
+      })),
+      displayTransitions: Object.entries(row.displayTransitions).reduce((acc, [symbol, states]) => {
+        acc[symbol] = states.map(ds => ({
+          stateId: ds.state.id ?? -1,
+          status: ds.status
+        }));
+        return acc;
+      }, {} as { [symbol: string]: SerializedDisplayState[] })
+    }));
+  }
+
+  private deserializeTableData(serializedRows: SerializedTableRow[] | undefined): void {
+    if (!serializedRows || serializedRows.length === 0) {
+      this.initializeEmptyTable();
+      return;
+    }
+
+    const stateMap = new Map<number, EndlicherState>();
+    stateMap.set(this.emptyState.id, this.emptyState);
+
+    // Build state map from current automaton
+    this.stateMachine.getAllStates().forEach(state => {
+      const endlicherState = state as EndlicherState;
+      stateMap.set(endlicherState.id, endlicherState);
+    });
+
+    this.tableData = serializedRows.map(serializedRow => {
+      const row: TableRow = {
+        id: serializedRow.id,
+        rowStatus: serializedRow.rowStatus as TableRow['rowStatus'],
+        displayStates: serializedRow.displayStates
+            .map(sds => {
+              const state = stateMap.get(sds.stateId);
+              if (state) {
+                return {
+                  state: state,
+                  status: sds.status as StateStatus
+                };
+              }
+              return null;
+            })
+            .filter(ds => ds !== null) as DisplayState[],
+        displayMarkers: serializedRow.displayMarkers.map(sdm => ({
+          id: sdm.id,
+          label: sdm.label,
+          status: sdm.status as StateStatus
+        })),
+        displayTransitions: {}
+      };
+
+      // Deserialize transitions
+      Object.entries(serializedRow.displayTransitions).forEach(([symbol, serializedStates]) => {
+        row.displayTransitions[symbol] = serializedStates
+            .map(sds => {
+              const state = stateMap.get(sds.stateId);
+              if (state) {
+                return {
+                  state: state,
+                  status: sds.status as StateStatus
+                };
+              }
+              return null;
+            })
+            .filter(ds => ds !== null) as DisplayState[];
+      });
+
+      return row;
+    });
+
+    this.cdRef.detectChanges();
+  }
+
+  private saveTableToAutomat(): void {
+    if (this.stateMachine) {
+      const serializedData = this.serializeTableData();
+      this.stateMachine.setTableData(serializedData);
+    }
+  }
+
+  private loadTableFromAutomat(): void {
+    if (this.stateMachine) {
+      const tableData = this.stateMachine.getTableData();
+      if (tableData && tableData.length > 0) {
+        this.deserializeTableData(tableData);
+      } else {
+        this.initializeEmptyTable();
+      }
+    }
   }
 
   get stateMachine(): EndlicherAutomat {
@@ -89,11 +228,9 @@ export class InputTableComponent implements OnInit, OnDestroy {
   }
 
   get symbols(): string[] {
-    // Primarily use the DfaGeneratorService for consistent alphabet
     if (this.stateMachine) {
       return this.dfaGeneratorService.getAlphabet(this.stateMachine);
     }
-    // Fallback if stateMachine is not yet available
     const uniqueSymbols = new Set<string>();
     if (this.service.transitions) {
       for (const transition of this.service.transitions) {
@@ -128,7 +265,6 @@ export class InputTableComponent implements OnInit, OnDestroy {
     console.log("Starte Generierung der Lösung für Vergleich...");
     let solutionData: SolutionTableRow[];
     try {
-      // Generate solution data using the service
       solutionData = this.dfaGeneratorService.generateSolutionTable(this.stateMachine);
       console.log("Lösung generiert:", solutionData);
     } catch (error: any) {
@@ -167,25 +303,20 @@ export class InputTableComponent implements OnInit, OnDestroy {
   private performComparisonBasedOnSolutionOrder(solutionData: SolutionTableRow[]): void {
     const finalTableRows: TableRow[] = [];
 
-    // Create a map of solution rows by their state set key for quick lookup
     const solutionMap = new Map<string, SolutionTableRow>();
     solutionData.forEach(sr => {
       const key = this.dfaGeneratorService.getStateSetKey(sr.states);
-      // Assuming solution keys generated by the service are unique for distinct DFA states.
-      // If duplicate keys could exist in solutionData for different rows, the last one would win here.
       solutionMap.set(key, sr);
     });
 
     const processedSolutionKeys = new Set<string>();
 
-    // Phase 1: Iterate through the user's original rows to maintain their order
     (this.originalTableDataBeforeCheck || []).forEach(originalInputRow => {
       const inputKey = this.getStateSetKeyFromDisplay(originalInputRow.displayStates);
       const matchingSolutionRow = solutionMap.get(inputKey);
       let comparedRow: TableRow;
 
       if (matchingSolutionRow) {
-        // User's row key matches a solution row key
         processedSolutionKeys.add(inputKey);
         let currentStatus: 'correct' | 'partial' = 'correct';
 
@@ -210,7 +341,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
         }
 
         comparedRow = {
-          id: originalInputRow.id, // Preserve original ID
+          id: originalInputRow.id,
           rowStatus: currentStatus,
           displayStates: states,
           displayMarkers: markers,
@@ -219,14 +350,13 @@ export class InputTableComponent implements OnInit, OnDestroy {
         };
 
       } else {
-        // User's row key does not match any solution row key -> incorrect row
         comparedRow = {
-          id: originalInputRow.id, // Preserve original ID
+          id: originalInputRow.id,
           rowStatus: 'incorrect',
           displayStates: originalInputRow.displayStates.map(ds => ({ ...ds, status: StateStatus.incorrect })),
           displayMarkers: originalInputRow.displayMarkers.map(dm => ({ ...dm, status: StateStatus.incorrect })),
           displayTransitions: {},
-          solutionStateKey: inputKey // The key of this incorrect user row
+          solutionStateKey: inputKey
         };
         this.symbols.forEach(symbol => {
           comparedRow.displayTransitions[symbol] = (originalInputRow.displayTransitions[symbol] || [])
@@ -236,13 +366,11 @@ export class InputTableComponent implements OnInit, OnDestroy {
       finalTableRows.push(comparedRow);
     });
 
-    // Phase 2: Add rows from solution that were not matched by any user input key (missing rows)
     solutionData.forEach(solutionRow => {
       const solutionKey = this.dfaGeneratorService.getStateSetKey(solutionRow.states);
       if (!processedSolutionKeys.has(solutionKey)) {
-        // This solution row was not represented in the user's input by key
         const missingRow: TableRow = {
-          id: this.getNextRowId(finalTableRows), // Generate a new ID
+          id: this.getNextRowId(finalTableRows),
           rowStatus: 'missing',
           displayStates: solutionRow.states.map(state => ({ state, status: StateStatus.missing })),
           displayMarkers: this.markers
@@ -335,11 +463,8 @@ export class InputTableComponent implements OnInit, OnDestroy {
     return result;
   }
 
-  /** Erzeugt einen Key aus einer Liste von DisplayState-Objekten unter Verwendung des Service. */
   private getStateSetKeyFromDisplay(displayStates: DisplayState[]): string {
     if (!displayStates) return '∅';
-    // Pass this.emptyState if the service's getStateSetKey relies on it contextually,
-    // but the service already has its own emptyState. So just pass the states.
     return this.dfaGeneratorService.getStateSetKey(displayStates.map(ds => ds.state));
   }
 
@@ -391,6 +516,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
         this.checkAndAddEmptyRowIfNeeded();
       }
     }
+    this.saveTableToAutomat(); // Save after each change
     this.cdRef.detectChanges();
   }
 
@@ -403,6 +529,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
         ds => ds.state.id !== displayStateToRemove.state.id
     );
     this.adjustEmptyRows();
+    this.saveTableToAutomat();
   }
 
   removeMarkerFromCell(rowId: number, displayMarkerToRemove: DisplayMarker): void {
@@ -414,6 +541,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
         ds => ds.id !== displayMarkerToRemove.id
     );
     this.adjustEmptyRows();
+    this.saveTableToAutomat();
   }
 
   removeTransitionState(rowId: number, symbol: string, displayStateToRemove: DisplayState): void {
@@ -427,6 +555,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
               ds => ds.state.id !== displayStateToRemove.state.id
           );
       this.adjustEmptyRows();
+      this.saveTableToAutomat();
     }
   }
 
@@ -447,6 +576,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
       row.displayMarkers.sort((a, b) => a.label.localeCompare(b.label));
     }
     this.adjustEmptyRows();
+    this.saveTableToAutomat();
   }
 
   private checkAndAddEmptyRowIfNeeded(): void {
@@ -507,6 +637,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
       this.exitCheckMode();
     } else {
       this.initializeEmptyTable();
+      this.saveTableToAutomat();
     }
   }
 
@@ -516,14 +647,13 @@ export class InputTableComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Spezielle Behandlung für Tab-Taste (vorwärts)
+    // Tab-Taste Behandlung
     if (this.activeCell && this.activeCellType && event.key === 'Tab' && !event.shiftKey) {
       const activeRowIndex = this.tableData.findIndex(row => row.id === this.activeCell);
       if (activeRowIndex !== -1) {
         const currentSymbols = this.symbols;
         const activeColIndex = this.activeCellType === 'state' ? 0 : currentSymbols.indexOf(this.activeCellType) + 1;
 
-        // Gültige Spalte prüfen (state oder ein existierendes Symbol)
         const isValidColumn = this.activeCellType === 'state' || (activeColIndex > 0 && activeColIndex <= currentSymbols.length);
 
         if (isValidColumn) {
@@ -535,49 +665,35 @@ export class InputTableComponent implements OnInit, OnDestroy {
 
             if (activeCellElement) {
               if (document.activeElement !== activeCellElement) {
-                // Fokus ist NICHT auf der logisch aktiven Zelle.
-                // Setze den Fokus auf die logisch aktive Zelle.
                 activeCellElement.focus();
-                // WICHTIG: KEIN event.preventDefault() hier.
-                // Der Browser soll das Tab-Event jetzt vom NEUEN Fokuspunkt (activeCellElement)
-                // aus weiterverarbeiten. Das bedeutet, der Fokus springt zu activeCellElement
-                // UND DANN (als Teil derselben Tab-Aktion) zum nächsten Element.
-                // Unser Keydown-Handler ist für dieses Event hier fertig.
                 return;
               }
-              // else: Fokus IST BEREITS auf der logisch aktiven Zelle.
-              // In diesem Fall tun wir nichts extra für Tab. Die Pfeiltasten-Logik
-              // unten wird durch die validArrowKeys-Prüfung übersprungen.
-              // Der Browser führt das normale Tabben aus.
             }
           }
         }
       }
-    } // Ende der speziellen Tab-Behandlung
+    }
 
-    // Pfeiltasten-Logik (nur wenn eine Zelle aktiv ist für die Navigation)
+    // Pfeiltasten-Logik
     if (!this.activeCell || !this.activeCellType) {
       return;
     }
 
     const validArrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
     if (!validArrowKeys.includes(event.key)) {
-      return; // Auf andere Tasten (inkl. Tab, das oben behandelt wurde oder durchfiel) nicht reagieren
+      return;
     }
 
-    // ----- Bestehende Pfeiltasten-Logik beginnt hier -----
     const currentRowId = this.activeCell;
     const currentCellType = this.activeCellType;
 
     const rowIndex = this.tableData.findIndex(row => row.id === currentRowId);
     if (rowIndex === -1) return;
 
-
     const currentSymbols = this.symbols;
     let colIndex = currentCellType === 'state' ? 0 : currentSymbols.indexOf(currentCellType) + 1;
     const isValidCurrentColumn = currentCellType === 'state' || (colIndex > 0 && colIndex <= currentSymbols.length);
     if (!isValidCurrentColumn) return;
-
 
     let newRowIndex = rowIndex;
     let newColIndex = colIndex;
@@ -596,8 +712,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
       if (!newRow) return;
 
       const newType = newColIndex === 0 ? 'state' : currentSymbols[newColIndex - 1];
-      // Sicherstellen, dass newType auch ein gültiger Typ ist bevor selectCell aufgerufen wird
-      if (newType === undefined && newColIndex > 0) return; // Ungültiger Sprung nach rechts/links bei Symbolen
+      if (newType === undefined && newColIndex > 0) return;
 
       this.selectCell(newRow.id, newType);
 
