@@ -725,7 +725,35 @@ export class InputTableComponent implements OnInit, OnDestroy {
       if (!isLastRowFull) return;
     }
 
-    console.log("Letzte Zeile gilt als voll, füge neue leere Zeile hinzu.");
+    // NEU: Prüfe ob alle Zustände in den Transitions bereits eigene Zeilen haben
+    const existingStateKeys = new Set<string>();
+    this.tableData.forEach(row => {
+      const stateKey = this.getStateSetKeyFromDisplay(row.displayStates);
+      if (stateKey !== '∅') {
+        existingStateKeys.add(stateKey);
+      }
+    });
+
+    // Sammle alle Zustände aus den Transitions der letzten Zeile
+    let hasNewStates = false;
+    for (const symbol of currentSymbols) {
+      const transitionStates = lastRow.displayTransitions[symbol] || [];
+      if (transitionStates.length > 0) {
+        const transitionKey = this.dfaGeneratorService.getStateSetKey(transitionStates.map(ds => ds.state));
+        if (transitionKey !== '∅' && !existingStateKeys.has(transitionKey)) {
+          hasNewStates = true;
+          break;
+        }
+      }
+    }
+
+    // Nur neue Zeile hinzufügen, wenn es tatsächlich neue Zustände gibt
+    if (!hasNewStates) {
+      console.log("Keine neuen Zustände gefunden, keine neue Zeile nötig.");
+      return;
+    }
+
+    console.log("Neue Zustände gefunden, füge neue leere Zeile hinzu.");
     this.tableData.push({
       id: this.getNextRowId(this.tableData),
       rowStatus: 'original',
@@ -739,13 +767,58 @@ export class InputTableComponent implements OnInit, OnDestroy {
   private adjustEmptyRows(): void {
     if (this.isCheckMode) return;
 
-    const rowsToKeep = this.tableData.filter((row, index) => {
-      const isEmpty = row.displayStates.length === 0 && row.displayMarkers.length === 0;
-      return !isEmpty || index === 0;
+    // Prüfe ob die letzte Zeile gelöscht werden sollte
+    if (this.tableData.length > 1) {
+      const lastRow = this.tableData[this.tableData.length - 1];
+      const secondLastRow = this.tableData[this.tableData.length - 2];
+
+      // Prüfe ob die letzte Zeile leer ist (keine States/Markers in erster Spalte)
+      const lastRowFirstColumnEmpty = lastRow.displayStates.length === 0 && lastRow.displayMarkers.length === 0;
+
+      if (lastRowFirstColumnEmpty) {
+        // Prüfe ob alle Transitions in der letzten Zeile leer sind
+        const lastRowAllTransitionsEmpty = this.symbols.every(symbol =>
+            !lastRow.displayTransitions[symbol] || lastRow.displayTransitions[symbol].length === 0
+        );
+
+        // Prüfe ob in der vorletzten Zeile mindestens eine Transition leer ist
+        const secondLastRowHasEmptyTransition = this.symbols.some(symbol =>
+            !secondLastRow.displayTransitions[symbol] || secondLastRow.displayTransitions[symbol].length === 0
+        );
+
+        // Lösche die letzte Zeile nur wenn sie komplett leer ist UND die vorletzte Zeile mindestens eine leere Transition hat
+        if (lastRowAllTransitionsEmpty && secondLastRowHasEmptyTransition) {
+          console.log("Entferne letzte leere Zeile, da vorletzte Zeile noch Platz hat.");
+          this.tableData.pop();
+          this.cdRef.detectChanges();
+          return;
+        }
+      }
+    }
+
+    // Entferne alle anderen komplett leeren Zeilen (außer der ersten und letzten)
+    const rowsToKeep: typeof this.tableData = [];
+
+    this.tableData.forEach((row, index) => {
+      const isFirstRow = index === 0;
+      const isLastRow = index === this.tableData.length - 1;
+      const firstColumnEmpty = row.displayStates.length === 0 && row.displayMarkers.length === 0;
+      const allTransitionsEmpty = this.symbols.every(symbol =>
+          !row.displayTransitions[symbol] || row.displayTransitions[symbol].length === 0
+      );
+
+      // Behalte die Zeile wenn:
+      // - Es die erste Zeile ist
+      // - Es die letzte Zeile ist (wird oben separat behandelt)
+      // - Die erste Spalte nicht leer ist
+      // - Oder mindestens eine Transition nicht leer ist
+      if (isFirstRow || isLastRow || !firstColumnEmpty || !allTransitionsEmpty) {
+        rowsToKeep.push(row);
+      }
     });
 
     if (rowsToKeep.length !== this.tableData.length) {
-      console.log(`Entferne ${this.tableData.length - rowsToKeep.length} leere Zeile(n).`);
+      console.log(`Entferne ${this.tableData.length - rowsToKeep.length} leere Zeile(n) aus der Mitte.`);
       this.tableData = rowsToKeep;
       this.cdRef.detectChanges();
     }
