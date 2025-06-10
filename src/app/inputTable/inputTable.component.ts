@@ -122,6 +122,36 @@ export class InputTableComponent implements OnInit, OnDestroy {
     }, 10);
   }
 
+  // Neue Methode zum Prüfen ob alles korrekt ist
+  protected checkIfAllCorrect(): boolean {
+    for (const row of this.tableData) {
+      // Prüfe ob die Zeile fehlende oder falsche Elemente hat
+      if (row.rowStatus === 'missing' || row.rowStatus === 'incorrect') {
+        return false;
+      }
+
+      // Prüfe alle Display States
+      if (row.displayStates.some(ds => ds.status !== StateStatus.correct)) {
+        return false;
+      }
+
+      // Prüfe alle Display Markers
+      if (row.displayMarkers.some(dm => dm.status !== StateStatus.correct)) {
+        return false;
+      }
+
+      // Prüfe alle Transitions
+      for (const symbol of this.symbols) {
+        const transitions = row.displayTransitions[symbol] || [];
+        if (transitions.some(ds => ds.status !== StateStatus.correct)) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
   // Neue Methode: Update Highlights basierend auf aktiver Zelle
   private updateHighlights(): void {
     this.clearHighlights();

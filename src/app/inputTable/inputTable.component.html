@@ -41,7 +41,9 @@
     </div>
 
     <!-- Die Tabelle -->
-    <table class="table">
+    <table class="table"
+           [class.table-all-correct]="isCheckMode && checkIfAllCorrect()"
+           [class.table-has-errors]="isCheckMode && !checkIfAllCorrect()">
         <colgroup>
             <col style="width: auto;">
             <col *ngFor="let symbol of symbols; trackBy: trackSymbol" style="width: 1fr;">

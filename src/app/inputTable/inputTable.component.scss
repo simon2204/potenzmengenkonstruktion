@@ -67,6 +67,19 @@
   border-collapse: collapse;
   table-layout: fixed;
   margin-bottom: 1.5rem;
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+/* Grüner Rahmen wenn alles korrekt ist */
+.table-all-correct {
+  box-shadow: 0 0 0 3px #16a34a; // Grüner Rahmen
+  border-radius: 0.375rem;
+}
+
+/* Roter Rahmen wenn Fehler vorhanden sind */
+.table-has-errors {
+  box-shadow: 0 0 0 3px #dc2626; // Roter Rahmen
+  border-radius: 0.375rem;
 }
 
 .table-header-first {
