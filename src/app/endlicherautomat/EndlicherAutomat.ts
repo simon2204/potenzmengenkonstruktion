@@ -52,7 +52,11 @@ export class EndlicherAutomat extends StateMachine {
 
   // Create a unique key for a set of states
   private getStateKey(states: EndlicherState[]): string {
+    if (states.length === 0) {
+      return '';
+    }
     return states
+        .filter((state) => state && state.name !== undefined)
         .map((state) => state.name)
         .sort()
         .join(', ');
@@ -157,7 +161,10 @@ export class EndlicherAutomat extends StateMachine {
     const unprocessedStates: Set<EndlicherState>[] = [startStateClosureSet];
 
     while (unprocessedStates.length > 0) {
-      const currentNFAStates = unprocessedStates.pop()!;
+      const currentNFAStates = unprocessedStates.pop();
+      if (!currentNFAStates) {
+        continue;
+      }
       const currentStateKey = this.getStateKey(Array.from(currentNFAStates));
 
       // Ensure the state key is valid and only assign ∅ if truly empty
@@ -305,7 +312,7 @@ export class EndlicherAutomat extends StateMachine {
     const finals = this.finalStates as Set<EndlicherState>;
     const start = this.startState as EndlicherState;
 
-    if (start == undefined) {
+    if (!start) {
       return new Result([], false);
     }
 
@@ -421,7 +428,11 @@ export class EndlicherAutomat extends StateMachine {
 
       // Add transitions
       for (const transition of jsonState.transitions) {
-        const destination = states.get(transition.destination)!;
+        const destination = states.get(transition.destination);
+        if (!destination) {
+          console.warn(`Transition destination not found: ${transition.destination}`);
+          continue;
+        }
         const newTransition = state.addTransition(
             destination
         ) as EndlicheTransition;

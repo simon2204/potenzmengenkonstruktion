@@ -1,6 +1,6 @@
 // Erweiterte Version von app.component.ts mit Auto-Load beim Start
 
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HeaderComponent } from '../../statemachine/src/lib/header/header.component';
 import { ToolbarComponent } from './toolbar/toolbar.component';
@@ -29,7 +29,11 @@ import { WelcomeDialogComponent } from './welcome-dialog/welcome-dialog.componen
 export class AppComponent implements OnInit {
   title = 'endlicherautomat';
 
-  constructor(public service: StatemachineService, public dialog: MatDialog) {
+  constructor(
+    public service: StatemachineService, 
+    public dialog: MatDialog,
+    private cdr: ChangeDetectorRef
+  ) {
     // Erstelle eine neue Instanz, falls noch keine existiert
     if (!service.stateMachine) {
       service.stateMachine = new EndlicherAutomat();
@@ -48,9 +52,11 @@ export class AppComponent implements OnInit {
         console.log('Automat und Tabelle aus Browser-Cache geladen');
 
         // Trigger change notification for InputTableComponent
-        setTimeout(() => {
-          (this.service as any).automatonChangedSubject?.next();
-        }, 100);
+        // Use Angular's change detection instead of setTimeout
+        this.cdr.detectChanges();
+        if ((this.service as any).automatonChangedSubject) {
+          (this.service as any).automatonChangedSubject.next();
+        }
       }
     } catch (error) {
       console.error('Fehler beim Laden aus Browser-Cache:', error);

@@ -86,13 +86,18 @@ export class InputTableComponent implements OnInit, OnDestroy {
     this.startAutoSave();
 
     // Subscribe to automaton changes
-    this.serviceSubscription = this.service.onAutomatonChanged?.subscribe(() => {
-      this.loadTableFromAutomat();
-    });
+    if (this.service.onAutomatonChanged) {
+      this.serviceSubscription = this.service.onAutomatonChanged.subscribe(() => {
+        this.loadTableFromAutomat();
+      });
+    }
   }
 
   ngOnDestroy(): void {
-    this.serviceSubscription?.unsubscribe();
+    if (this.serviceSubscription) {
+      this.serviceSubscription.unsubscribe();
+      this.serviceSubscription = null;
+    }
     this.stopAutoSave();
     this.clearHighlights();
   }
@@ -115,11 +120,11 @@ export class InputTableComponent implements OnInit, OnDestroy {
     }
 
     // Force update through service to ensure SVG re-renders
-    setTimeout(() => {
-      if (this.service && (this.service as any).automatonChangedSubject) {
-        (this.service as any).automatonChangedSubject.next();
-      }
-    }, 10);
+    // Use Angular's change detection instead of setTimeout
+    this.cdRef.detectChanges();
+    if (this.service && (this.service as any).automatonChangedSubject) {
+      (this.service as any).automatonChangedSubject.next();
+    }
   }
 
   // Neue Methode zum Prüfen ob alles korrekt ist
@@ -221,6 +226,7 @@ export class InputTableComponent implements OnInit, OnDestroy {
   }
 
   private startAutoSave(): void {
+    this.stopAutoSave(); // Clear any existing interval first
     if (this.autoSaveEnabled) {
       this.autoSaveInterval = setInterval(() => {
         this.saveTableToAutomat();
