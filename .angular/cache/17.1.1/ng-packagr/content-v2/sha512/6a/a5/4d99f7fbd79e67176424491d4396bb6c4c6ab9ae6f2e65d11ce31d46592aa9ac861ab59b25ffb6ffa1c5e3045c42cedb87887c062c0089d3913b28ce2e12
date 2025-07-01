@@ -1,1 +1,0 @@
-{"css":":host{display:flex;flex-direction:row;justify-content:space-between;align-items:center;margin:10px;gap:10px}.tapeInput{border-radius:5px;border-width:2px;border-style:solid;box-sizing:border-box;height:30px;font-size:large}.accepting{border-color:green}.notAccepting{border-color:red}span{font-size:large}\n","warnings":[]}

@@ -38,6 +38,8 @@ export class TransitionEditState extends StateMachineViewState {
       this.transitionFrom.outerCircleHovered = false;
       this.transitionTo.outerCircleHovered = false;
       this.transitionTo.outerCircleHovered = false;
+      // Emit change event after transition edit
+      (this.statemachineviewComponent.statemachineService as any).automatonChangedSubject.next();
     });
   }
 

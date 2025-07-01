@@ -1,6 +1,6 @@
 // Erweiterte Version von app.component.ts mit Auto-Load beim Start
 
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HeaderComponent } from 'commons';
 import { ToolbarComponent } from './toolbar/toolbar.component';
@@ -12,6 +12,7 @@ import { InputTableComponent } from './inputTable/inputTable.component';
 import { MatDialog } from '@angular/material/dialog';
 import { WelcomeDialogComponent } from './welcome-dialog/welcome-dialog.component';
 import { TutorialDialogComponent } from './tutorial-dialog/tutorial-dialog.component';
+import { Subscription, debounceTime } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -27,8 +28,9 @@ import { TutorialDialogComponent } from './tutorial-dialog/tutorial-dialog.compo
     InputTableComponent,
   ],
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   title = 'endlicherautomat';
+  private saveSubscription?: Subscription;
 
   constructor(
     public service: StatemachineService, 
@@ -77,6 +79,33 @@ export class AppComponent implements OnInit {
         width: '70vh',
         height: '60vh',
       });
+    }
+
+    // Subscribe to automaton changes with debounce for auto-save
+    this.saveSubscription = this.service.onAutomatonChanged
+      .pipe(debounceTime(1000)) // Wait 1 second after last change
+      .subscribe(() => {
+        this.saveToCache();
+      });
+  }
+
+  ngOnDestroy(): void {
+    // Clean up subscription
+    if (this.saveSubscription) {
+      this.saveSubscription.unsubscribe();
+    }
+    // Save one last time before destroying
+    this.saveToCache();
+  }
+
+  private saveToCache(): void {
+    try {
+      if (this.service.stateMachine) {
+        (this.service.stateMachine as EndlicherAutomat).saveToBrowserCache();
+        console.log('Automaton saved to browser cache');
+      }
+    } catch (error) {
+      console.error('Error saving to browser cache:', error);
     }
   }
 }

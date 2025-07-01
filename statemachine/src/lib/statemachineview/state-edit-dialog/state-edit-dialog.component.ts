@@ -45,6 +45,7 @@ export class StateEditDialogComponent {
 
   toggleStart(isChecked: boolean) {
     this.service.stateMachine.startState = isChecked ? this.data : undefined;
+    (this.service as any).automatonChangedSubject.next();
   }
   
   toggleFinal(isChecked: boolean) {
@@ -59,5 +60,6 @@ export class StateEditDialogComponent {
             ...this.service.stateMachine.finalStates
         ]);
     }
+    (this.service as any).automatonChangedSubject.next();
   }
 }

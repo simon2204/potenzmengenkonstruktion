@@ -12,6 +12,9 @@ fi
 
 echo "Build successful!"
 
+# README sichern
+cp statemachine/README-commons.md dist/commons/README.md 2>/dev/null || true
+
 # In dist/commons wechseln
 cd dist/commons
 
