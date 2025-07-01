@@ -37,9 +37,16 @@ export class EndlicheTransition extends Transition {
   }
 
   override toJSON(): Object {
-    return {
+    const base: any = {
       destination: this.destination.id,
       transitionSymbols: this.transitionSymbols,
     };
+    
+    // Include relativePos if it exists (for curved transitions)
+    if (this.relativePos) {
+      base.relativePos = this.relativePos;
+    }
+    
+    return base;
   }
 }

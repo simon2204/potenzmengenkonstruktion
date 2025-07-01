@@ -437,6 +437,11 @@ export class EndlicherAutomat extends StateMachine {
             destination
         ) as EndlicheTransition;
         newTransition.transitionSymbols = transition.transitionSymbols;
+        
+        // Restore the relativePos if it exists (for curved transitions)
+        if (transition.relativePos) {
+          newTransition.relativePos = transition.relativePos;
+        }
       }
     }
 
