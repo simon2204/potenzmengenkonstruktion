@@ -96,6 +96,29 @@
           }
         }
       }
+    },
+    "commons": {
+      "projectType": "library",
+      "root": "statemachine",
+      "sourceRoot": "statemachine/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:ng-packagr",
+          "options": {
+            "project": "statemachine/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "statemachine/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "statemachine/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        }
+      }
     }
   },
   "cli": {

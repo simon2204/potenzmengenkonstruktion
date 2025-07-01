@@ -5,7 +5,7 @@ import { StateMachine } from './statemachine';
 import { State } from './state';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { Transition } from './stateconnections/Transition';
-import {TutorialDialogComponent} from "../../../../src/app/tutorial-dialog/tutorial-dialog.component";
+// Tutorial Dialog muss von der Anwendung bereitgestellt werden
 import { Subject } from 'rxjs';
 
 @Injectable({
@@ -154,10 +154,19 @@ export class StatemachineService {
     return this.stateMachine.isAcceptingWord(this.stateMachine.input).isAccepting;
   }
 
+  // Dialog-Komponente für Hilfe/Tutorial
+  private helpDialogComponent: any;
+
+  setHelpDialogComponent(component: any): void {
+    this.helpDialogComponent = component;
+  }
+
   openHelpDialog(): void {
-    this.dialog.open(TutorialDialogComponent, {
-      maxWidth: '70vw',
-      maxHeight: '90vh',
-    });
+    if (this.helpDialogComponent) {
+      this.dialog.open(this.helpDialogComponent, {
+        maxWidth: '70vw',
+        maxHeight: '90vh',
+      });
+    }
   }
 }

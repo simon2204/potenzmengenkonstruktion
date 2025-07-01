@@ -2,15 +2,16 @@
 
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HeaderComponent } from '../../statemachine/src/lib/header/header.component';
+import { HeaderComponent } from 'commons';
 import { ToolbarComponent } from './toolbar/toolbar.component';
-import { FooterComponent } from '../../statemachine/src/lib/footer/footer.component';
-import { CoreComponent } from '../../statemachine/src/public-api';
-import { StatemachineService } from '../../statemachine/src/lib/statemachine/statemachine.service';
+import { FooterComponent } from 'commons';
+import { CoreComponent } from 'commons';
+import { StatemachineService } from 'commons';
 import { EndlicherAutomat } from './endlicherautomat/EndlicherAutomat';
 import { InputTableComponent } from './inputTable/inputTable.component';
 import { MatDialog } from '@angular/material/dialog';
 import { WelcomeDialogComponent } from './welcome-dialog/welcome-dialog.component';
+import { TutorialDialogComponent } from './tutorial-dialog/tutorial-dialog.component';
 
 @Component({
   selector: 'app-root',
@@ -38,6 +39,9 @@ export class AppComponent implements OnInit {
     if (!service.stateMachine) {
       service.stateMachine = new EndlicherAutomat();
     }
+
+    // Registriere die TutorialDialogComponent im Service
+    service.setHelpDialogComponent(TutorialDialogComponent);
 
     // Versuche, gespeicherte Daten aus dem Browser-Cache zu laden
     this.loadFromCacheIfAvailable();

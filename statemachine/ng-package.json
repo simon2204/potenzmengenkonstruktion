@@ -1,7 +1,10 @@
 {
-  "$schema": "../../node_modules/ng-packagr/ng-package.schema.json",
-  "dest": "../../dist/commons",
+  "$schema": "../node_modules/ng-packagr/ng-package.schema.json",
+  "dest": "../dist/commons",
   "lib": {
     "entryFile": "src/public-api.ts"
-  }
+  },
+  "assets": [
+    "src/lib/assets"
+  ]
 }

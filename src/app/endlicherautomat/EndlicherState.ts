@@ -1,5 +1,5 @@
-import { State } from '../../../statemachine/src/lib/statemachine/state';
-import { Transition } from '../../../statemachine/src/lib/statemachine/stateconnections/Transition';
+import { State } from 'commons';
+import { Transition } from 'commons';
 import { EndlicherAutomat } from './EndlicherAutomat';
 import { EndlicheTransition } from './EndlicheTransition';
 

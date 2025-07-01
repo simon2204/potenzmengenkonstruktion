@@ -4,7 +4,7 @@ import { StatemachineService } from '../statemachine/statemachine.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { environment } from '../../../../src/environments/environment';
+// Environment wird von der Anwendung bereitgestellt
 import {HttpClient} from "@angular/common/http";
 import {firstValueFrom} from "rxjs";
 
@@ -103,7 +103,7 @@ export class MenuComponent implements OnInit {
 
   async fetchJSON(type: string, name: string) {
     const response = await fetch(
-      environment.baseURL + '/assets/' + type + '/' + name + '.json'
+      (this.baseURL || '') + '/assets/' + type + '/' + name + '.json'
     );
     const json = await response.json();
     return json;

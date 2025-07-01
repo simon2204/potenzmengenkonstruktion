@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { EndlicherAutomat } from '../endlicherautomat/EndlicherAutomat';
 import { EndlicherState } from '../endlicherautomat/EndlicherState';
 import { EndlicheTransition } from '../endlicherautomat/EndlicheTransition';
-import { Point } from '../../../statemachine/src/lib/statemachine/drawingprimitives/Point';
+import { Point } from 'commons';
 
 // Interface für die Struktur einer Tabellenzeile (Lösung)
 export interface SolutionTableRow {

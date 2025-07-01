@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatTableModule } from '@angular/material/table';
-import { StatemachineService } from '../../../statemachine/src/lib/statemachine/statemachine.service';
+import { StatemachineService } from 'commons';
 import { EndlicherAutomat } from '../endlicherautomat/EndlicherAutomat';
 
 @Component({

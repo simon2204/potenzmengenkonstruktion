@@ -53,7 +53,7 @@ $table-header-color: rgba(81, 89, 97, 0.1);
 header {
   display: block;
   background: $black;
-  background-image: url(assets/WH-Logo.gif);
+  // background-image: url(./assets/WH-Logo.gif); // TODO: Fix asset handling in library build
   background-position: 30px center;
   background-repeat: no-repeat;
   background-size: auto 40%;

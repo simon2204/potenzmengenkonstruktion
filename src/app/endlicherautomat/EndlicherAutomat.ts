@@ -1,12 +1,12 @@
 // Erweiterte Version von EndlicherAutomat.ts mit Tabellenspeicherung
 
-import { Result } from '../../../statemachine/src/lib/statemachine/Result';
-import { Point } from '../../../statemachine/src/lib/statemachine/drawingprimitives/Point';
-import { StateMachine } from '../../../statemachine/src/lib/statemachine/statemachine';
+import { Result } from 'commons';
+import { Point } from 'commons';
+import { StateMachine } from 'commons';
 import { InputTable } from '../inputTable/inputTable';
 import { EndlicheTransition } from './EndlicheTransition';
 import { EndlicherState } from './EndlicherState';
-import { State } from '../../../statemachine/src/lib/statemachine/state';
+import { State } from 'commons';
 
 // Neue Interfaces für die Serialisierung der Tabelle
 export interface SerializedDisplayState {

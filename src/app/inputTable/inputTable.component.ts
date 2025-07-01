@@ -4,9 +4,9 @@ import {ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit} from '@an
 import {CommonModule} from '@angular/common';
 import {StateBlockComponent} from "./state-block/state-block.component";
 import {EndlicherState} from "../endlicherautomat/EndlicherState";
-import {StatemachineService} from "../../../statemachine/src/lib/statemachine/statemachine.service";
+import { StatemachineService } from 'commons';
 import {EndlicheTransition} from "../endlicherautomat/EndlicheTransition";
-import {Point} from "../../../statemachine/src/lib/statemachine/drawingprimitives/Point";
+import { Point } from 'commons';
 import {
   DfaGeneratorService,
   SolutionTableRow,
