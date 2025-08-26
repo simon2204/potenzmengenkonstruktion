@@ -2,10 +2,8 @@
 
 import { Component, OnInit, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HeaderComponent } from 'commons';
+import { HeaderComponent, FooterComponent, CoreComponent } from 'commons';
 import { ToolbarComponent } from './toolbar/toolbar.component';
-import { FooterComponent } from 'commons';
-import { CoreComponent } from 'commons';
 import { StatemachineService } from 'commons';
 import { EndlicherAutomat } from './endlicherautomat/EndlicherAutomat';
 import { InputTableComponent } from './inputTable/inputTable.component';
@@ -54,7 +52,7 @@ export class AppComponent implements OnInit, OnDestroy {
       const savedData = localStorage.getItem('endlicherautomat');
       if (savedData) {
         const json = JSON.parse(savedData);
-        this.service.stateMachine = this.service.stateMachine.createInstanceFromJSON(json);
+        this.service.stateMachine = this.service.stateMachine?.createInstanceFromJSON(json) || new EndlicherAutomat();
         console.log('Automat und Tabelle aus Browser-Cache geladen');
 
         // Trigger change notification for InputTableComponent
