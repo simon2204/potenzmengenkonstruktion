@@ -9,7 +9,6 @@ variables:
   NODE_VERSION: "18"
   APP_NAME: "potenzmengenkonstruktion"
   DEPLOY_PATH: "/usr/share/nginx/html/Potenzmengenkonstruktion"
-  COMMONS_REPO_URL: "git+ssh://git@git.w-hs.de:pi-lab/thi/commons.git"
 
 # Build Stage - Holt neueste Commons Library und baut App
 build_app:
@@ -43,45 +42,29 @@ build_app:
     - develop
     - /^release\/.*$/
 
-# Deploy Stage - App auf nginx Server deployen
+# Deploy Stage - App lokal auf nginx Server deployen
 deploy_to_server:
   stage: deploy
-  before_script:
-    # SSH Setup für Deployment Server
-    - eval $(ssh-agent -s)
-    - echo "$DEPLOY_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - echo "$DEPLOY_SERVER_HOST_KEY" >> ~/.ssh/known_hosts
-    - chmod 644 ~/.ssh/known_hosts
   script:
-    - echo "Deploying to nginx server..."
+    - echo "Deploying to local nginx server..."
     
     # Backup erstellen (falls vorhanden)
     - |
-      ssh $DEPLOY_USER@$DEPLOY_HOST "
-        if [ -d '$DEPLOY_PATH' ]; then
-          sudo cp -r '$DEPLOY_PATH' '${DEPLOY_PATH}.backup.$(date +%Y%m%d-%H%M%S)'
-        fi
-      "
+      if [ -d '$DEPLOY_PATH' ]; then
+        sudo cp -r '$DEPLOY_PATH' '${DEPLOY_PATH}.backup.$(date +%Y%m%d-%H%M%S)'
+      fi
     
     # Deploy-Ordner vorbereiten
-    - ssh $DEPLOY_USER@$DEPLOY_HOST "sudo mkdir -p '$DEPLOY_PATH'"
+    - sudo mkdir -p '$DEPLOY_PATH'
     
-    # Neue Version hochladen
-    - echo "Uploading new version..."
-    - scp -r dist/$APP_NAME/* $DEPLOY_USER@$DEPLOY_HOST:/tmp/Potenzmengenkonstruktion-deploy/
+    # Alte Version entfernen und neue Version kopieren
+    - echo "Copying new version..."
+    - sudo rm -rf '$DEPLOY_PATH'/*
+    - sudo cp -r dist/$APP_NAME/* '$DEPLOY_PATH'/
     
-    # Dateien an finalen Ort verschieben
-    - |
-      ssh $DEPLOY_USER@$DEPLOY_HOST "
-        sudo rm -rf '$DEPLOY_PATH'/*
-        sudo mv /tmp/Potenzmengenkonstruktion-deploy/* '$DEPLOY_PATH'/
-        sudo chown -R www-data:www-data '$DEPLOY_PATH'
-        sudo chmod -R 755 '$DEPLOY_PATH'
-        rm -rf /tmp/Potenzmengenkonstruktion-deploy
-      "
-    
+    # Berechtigungen setzen
+    - sudo chown -R www-data:www-data '$DEPLOY_PATH'
+    - sudo chmod -R 755 '$DEPLOY_PATH'
     
     - echo "Successfully deployed to https://pi-lab.w-hs.de/Potenzmengenkonstruktion"
   dependencies:
