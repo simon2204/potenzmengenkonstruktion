@@ -16,10 +16,8 @@ potenzmengenkonstruktion/
 │       ├── inputTable/         # Interaktive Tabelle für Potenzmengenkonstruktion
 │       ├── services/           # DFA-Generierung
 │       └── toolbar/            # UI-Komponenten
-├── statemachine/               # Commons Library Quellcode
-│   └── src/lib/               # Wiederverwendbare Komponenten
-├── dist/commons/              # Gebaute Commons Library
-└── CLAUDE.md                  # Projekt-spezifische Anweisungen
+└── statemachine/               # Commons Library Quellcode
+     └── src/lib/               # Wiederverwendbare Komponenten
 ```
 
 ## Commons Library
